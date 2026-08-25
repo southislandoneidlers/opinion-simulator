@@ -26,6 +26,9 @@ export type DraftState = {
   createdAt: string;
 };
 
+// 目前寫死單一 Gemini 型號；v0.2 多供應商工作將加入選擇器。
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+
 const drafts = new Map<string, DraftState>();
 
 function nowIso(): string {
@@ -106,7 +109,7 @@ function buildPlan(draft: DraftState) {
     questionSet,
     settings: {
       provider: "gemini",
-      model: "gemini-2.0-flash",
+      model: DEFAULT_GEMINI_MODEL,
       endpointClass: "google-generativelanguage",
       sampleCount: 1,
       temperature: null,
@@ -186,7 +189,7 @@ export async function runMocked(projectDirectory: string, acknowledgedDisclaimer
     sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
     questions: draft.questions.map((item) => item.trim()).filter(Boolean)
   });
-  return completeRun(draft, mocked.result, mocked.rawResponse, "gemini", "gemini-2.0-flash");
+  return completeRun(draft, mocked.result, mocked.rawResponse, "gemini", DEFAULT_GEMINI_MODEL);
 }
 
 export async function runLiveGemini(projectDirectory: string, acknowledgedDisclaimer: boolean) {

@@ -4,10 +4,10 @@
 
 ## Supplied context
 
-- Persona: 公立國中校長
+- Persona: 南部公立高中校長
 - Question Set: 使用者問題
 
-1. 請問校長對教育部長受訪回應的內容的看法。
+1. 想請問校長對教育部長受訪回應的內容的看法
 
 ### Source
 
@@ -387,9 +387,9 @@ https://www.ner.gov.tw/Program/Unit/24102210171756167/
 
 ### Source mappings
 
-- `source-pasted-mt82p5bv`: “![](https://www.youtube.” → 回應以貼上的 Source 片段為依據。
+- `source-pasted-mt83kv1r`: “![](https://www.youtube.” → 回應以貼上的 Source 片段為依據。
 
 ## Details
 
-- Run record: `runs/project-item-mt82p5bv-run-001.json`
+- Run record: `runs/project-item-mt83kv1r-run-001.json`
 - Method limits: `methodology.md` (version 0.0.1, sha256 `67e590a8dc7dc19dff17cf707794f19a75f95cf40193a3e401ae0a4858b81bd4`)
