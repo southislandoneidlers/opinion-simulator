@@ -1,0 +1,43 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-desktop",
+    "writerVersion": "0.1.0"
+  },
+  "createdAt": "2026-08-25T03:28:31Z",
+  "currentPersonaVersionIds": [
+    "persona-version-item-mt83w57c"
+  ],
+  "description": "v0.1 desktop tracer Project",
+  "locale": "zh-TW",
+  "projectId": "project-item-mt83uz6p",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638",
+      "id": "default-persona-simulation",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "project-item-mt83uz6p-questions-001",
+      "questions": [
+        "想請問校長對教育部長回應內容的看法"
+      ],
+      "responseInstructions": "",
+      "title": "使用者問題"
+    }
+  ],
+  "reportIds": [
+    "project-item-mt83uz6p-report-001"
+  ],
+  "runIds": [
+    "project-item-mt83uz6p-run-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-pasted-mt83uz6p"
+  ],
+  "title": "桌面模擬",
+  "updatedAt": "2026-08-25T03:30:42Z"
+}

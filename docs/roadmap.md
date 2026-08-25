@@ -69,12 +69,10 @@ session record. See
 
 ## v0.1 — Desktop tracer bullet
 
-Status: scaffold implemented on 2026-08-24 and restored the same day. Mocked
-Project writes validate against the v0.0 Python CLI. Live Gemini is opt-in via
-the main-process environment and has not been run. Keychain storage remains
-v0.2. The first GUI run exposed a destructive writer bug (fixed by the
-empty-target guard) and UX gaps (fixed: single-background Persona input,
-multi-question entry, zh-TW copy, visible errors).
+Status: complete on 2026-08-24. The packaged dev build completed one mocked
+and one opt-in live Gemini flow (`gemini-3.6-flash`) with valid artifacts and
+clean secret scans; walkthrough evidence Projects were restored after a
+user-initiated cleanup (see the incident and recovery handoffs).
 
 Scope:
 
@@ -92,10 +90,21 @@ opt-in live flow without credential or Project corruption.
 
 ## v0.2 — Secure multi-provider foundation
 
+Status: planning approved by the user on 2026-08-24. Three user-requested
+items were pulled into this milestone: prompt-section reordering for token
+savings, a reusable Persona library, and non-empty Project directories
+(append Runs into one folder).
+
 Scope:
 
 - macOS Keychain and Windows Credential Manager;
-- OpenAI provider;
+- Gemini model selection plus OpenAI provider;
+- prompt-section reordering: repeated/static sections first, per-Run content
+  (Persona, questions, Source) last, for token savings and cache friendliness;
+- reusable Persona library: pick previously confirmed Persona Versions instead
+  of re-typing;
+- non-empty Project directories: open an existing valid Project and append new
+  Runs safely without ever deleting content;
 - finalized open Project format and migrations;
 - persistent queue, cancellation, resume, retry, and partial Results;
 - full Electron IPC hardening.

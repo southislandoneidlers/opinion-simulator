@@ -1,0 +1,46 @@
+{
+  "drafts": [],
+  "schemaVersion": "0.0",
+  "versions": [
+    {
+      "contentHash": "e83ffc73e5309c8e0750fcdf321d9fe0d243053f4c9225c90d06249337d369d0",
+      "createdAt": "2026-08-25T03:29:25Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "我們是區域的重點高中。我希望利用數位工具打破地域限制，讓學生能與北部、甚至國外的學生進行專題協作，開拓他們的視野。指引需要提供跨校合作的實例與資源。"
+        }
+      ],
+      "fields": {
+        "roleAndContext": "我們是區域的重點高中。我希望利用數位工具打破地域限制，讓學生能與北部、甚至國外的學生進行專題協作，開拓他們的視野。指引需要提供跨校合作的實例與資源。"
+      },
+      "id": "persona-version-item-mt83w57c",
+      "inferences": [],
+      "label": "南部公立高中校長",
+      "notProvidedFields": [
+        "goalsAndInterests",
+        "concerns",
+        "constraintsAndResources",
+        "knowledgeAndExperience",
+        "valuesAndDecisionStyle",
+        "responseStyle",
+        "notes"
+      ],
+      "personaId": "persona-item-mt83w57c",
+      "provenance": {
+        "method": "manually structured in v0.1 desktop tracer"
+      },
+      "rawInput": "我們是區域的重點高中。我希望利用數位工具打破地域限制，讓學生能與北部、甚至國外的學生進行專題協作，開拓他們的視野。指引需要提供跨校合作的實例與資源。",
+      "review": {
+        "confirmedAt": "2026-08-25T03:29:25Z",
+        "confirmedBy": "desktop-user",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    }
+  ]
+}
