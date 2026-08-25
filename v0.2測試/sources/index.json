@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.0",
+  "sources": [
+    {
+      "extraction": {
+        "lineEndings": "LF",
+        "method": "pasted-text",
+        "version": "0.0"
+      },
+      "filename": "pasted-source.txt",
+      "mediaType": "text/plain",
+      "originalCopied": false,
+      "provenance": {
+        "kind": "pasted-text",
+        "recordedAt": "2026-08-25T02:55:59Z"
+      },
+      "sourceId": "source-pasted-mt82p5bv",
+      "textSha256": "3c94a0e64928ee59cffcb77e3eb849316cd7ec7892dd16c4900f31f0ad2b60c5",
+      "warnings": []
+    }
+  ]
+}

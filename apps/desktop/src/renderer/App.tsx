@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 type Stage = "overview" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
 
@@ -196,12 +196,12 @@ export function App() {
         {stage === "preflight" && (
           <section className="card">
             <h1>Preflight</h1>
-            <p>送出前檢視目前計畫：外傳材料、Persona、問題、模型與目的地。</p>
+            <p>送出前逐項確認：外傳材料、Persona、問題、模型與目的地。確認無誤後再勾選底部聲明並前往「執行」。</p>
             <button className="primary" onClick={() => void renderPreflight()}>
               產生目前計畫預覽
             </button>
-            {preflight ? <pre>{JSON.stringify(preflight, null, 2)}</pre> : null}
-            <label>
+            {preflight ? <PreflightReport data={preflight} /> : null}
+            <label className="disclaimer-check">
               <input type="checkbox" checked={disclaimer} onChange={(event) => setDisclaimer(event.target.checked)} />
               我承認這是 AI 模擬的預測，不是真實引言
             </label>
@@ -243,6 +243,167 @@ export function App() {
         )}
         <p>{status}</p>
       </main>
+    </div>
+  );
+}
+
+function parseMaybeJson(text: unknown): unknown | null {
+  if (typeof text !== "string") {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function Row({ label, value }: { label: string; value: ReactNode }) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  return (
+    <div className="kv">
+      <span className="kv-label">{label}</span>
+      <span className="kv-value">{value}</span>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="preflight-section">
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+export function PreflightReport({ data }: { data: Record<string, unknown> }) {
+  const outbound = data.outbound as Record<string, any> | undefined;
+  const destination = data.destination as Record<string, any> | undefined;
+  const estimate = data.estimate as Record<string, any> | undefined;
+  const persona = outbound?.personaVersion as Record<string, any> | undefined;
+  const sections = (outbound?.promptSections ?? {}) as Record<string, string>;
+  const source = outbound?.source as Record<string, any> | undefined;
+  const warnings = (data.warnings as string[] | undefined) ?? [];
+  const fields = (persona?.fields ?? {}) as Record<string, string>;
+
+  const fieldLabels: Record<string, string> = {
+    roleAndContext: "角色與情境",
+    goalsAndInterests: "目標與關注",
+    concerns: "顧慮",
+    constraintsAndResources: "限制與資源",
+    knowledgeAndExperience: "知識與經驗",
+    valuesAndDecisionStyle: "價值與決策風格",
+    responseStyle: "回應風格",
+    notes: "備註"
+  };
+
+  const sampling = parseMaybeJson(sections.modelAndSampling) as Record<string, any> | null;
+  const outputSchemaText = sections.outputSchema;
+
+  return (
+    <div className="preflight-report">
+      <div className="preflight-meta">
+        <Row label="執行編號" value={String(data.runId ?? "")} />
+        <Row label="目的地" value={destination ? `${destination.provider} · ${destination.model}` : ""} />
+        <Row label="樣本數" value={String(data.sampleCount ?? "")} />
+        <Row
+          label="規模估算"
+          value={
+            estimate
+              ? `約 ${estimate.inputCharactersPerRequest} 字／請求，約 ${estimate.approximateInputTokensPerRequest} tokens × ${estimate.requestCount} 個請求（字數推估，非計費資料）`
+              : ""
+          }
+        />
+        <Row label="計畫產生時間" value={String(data.createdAt ?? "").replace("T", " ").replace("Z", " UTC")} />
+      </div>
+
+      {warnings.length > 0 ? (
+        <Section title="注意事項">
+          <ul className="plain-list">
+            {warnings.map((warning, index) => (
+              <li key={index}>{warning}</li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
+
+      <Section title="外傳材料（Source）">
+        {source ? (
+          <>
+            <p className="muted">檔名：{source.filename}</p>
+            <blockquote className="source-quote">{String(source.text)}</blockquote>
+          </>
+        ) : null}
+      </Section>
+
+      <Section title="Persona 版本">
+        {persona ? (
+          <>
+            <Row label="顯示名稱" value={String(persona.label ?? "")} />
+            {Object.entries(fields).map(([key, value]) => (
+              <Row key={key} label={fieldLabels[key] ?? key} value={value} />
+            ))}
+            {(persona.notProvidedFields as string[] | undefined)?.length ? (
+              <p className="muted">
+                未提供（保持空白，不會由 AI 補足）：
+                {(persona.notProvidedFields as string[])
+                  .map((key) => fieldLabels[key] ?? key)
+                  .join("、")}
+              </p>
+            ) : null}
+            {persona.rawInput ? (
+              <details className="advanced">
+                <summary>原始輸入原文</summary>
+                <blockquote className="source-quote">{String(persona.rawInput)}</blockquote>
+              </details>
+            ) : null}
+          </>
+        ) : null}
+      </Section>
+
+      <Section title="要詢問的問題">
+        <pre className="prompt-plain">{sections.questions ?? ""}</pre>
+      </Section>
+
+      <Section title="給模型的系統指令">
+        <pre className="prompt-plain">{sections.systemAndTaskRules ?? ""}</pre>
+      </Section>
+
+      <details className="advanced">
+        <summary>進階：模型取樣參數</summary>
+        {sampling ? (
+          <div className="preflight-meta">
+            <Row label="provider" value={String(sampling.provider ?? "")} />
+            <Row label="model" value={String(sampling.model ?? "")} />
+            <Row label="sampleCount" value={String(sampling.sampleCount ?? "")} />
+            <Row
+              label="settings"
+              value={JSON.stringify(sampling.settings ?? {}, null, 0)}
+            />
+            <Row
+              label="truncation"
+              value={`${sampling.truncation?.strategy ?? ""}${sampling.truncation?.applied ? "（已套用）" : "（未套用）"}`}
+            />
+          </div>
+        ) : (
+          <pre className="prompt-plain">{sections.modelAndSampling ?? ""}</pre>
+        )}
+      </details>
+
+      <details className="advanced">
+        <summary>進階：要求的輸出格式（JSON schema 說明）</summary>
+        <pre className="prompt-plain">{outputSchemaText ?? ""}</pre>
+      </details>
+
+      <details className="advanced">
+        <summary>進階：完整原始預覽（JSON）</summary>
+        <pre>{JSON.stringify(data, null, 2)}</pre>
+      </details>
+
+      <div className="disclaimer-banner">{String(data.predictionDisclaimer ?? "")}</div>
     </div>
   );
 }

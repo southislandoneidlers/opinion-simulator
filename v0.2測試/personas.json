@@ -1,0 +1,46 @@
+{
+  "drafts": [],
+  "schemaVersion": "0.0",
+  "versions": [
+    {
+      "contentHash": "f2b335110d6c4e4c6469251e9e835d3f93bafef5b45c056a3c8f6188c4997285",
+      "createdAt": "2026-08-25T02:57:57Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "升學壓力是我們最大的挑戰。老師們普遍擔心數位教學會佔用課業複習時間。我希望能從指引或工作坊中，找到能兼顧「數位學習」與「會考成績」的雙贏策略。"
+        }
+      ],
+      "fields": {
+        "roleAndContext": "升學壓力是我們最大的挑戰。老師們普遍擔心數位教學會佔用課業複習時間。我希望能從指引或工作坊中，找到能兼顧「數位學習」與「會考成績」的雙贏策略。"
+      },
+      "id": "persona-version-item-mt82roc8",
+      "inferences": [],
+      "label": "公立國中校長",
+      "notProvidedFields": [
+        "goalsAndInterests",
+        "concerns",
+        "constraintsAndResources",
+        "knowledgeAndExperience",
+        "valuesAndDecisionStyle",
+        "responseStyle",
+        "notes"
+      ],
+      "personaId": "persona-item-mt82roc8",
+      "provenance": {
+        "method": "manually structured in v0.1 desktop tracer"
+      },
+      "rawInput": "升學壓力是我們最大的挑戰。老師們普遍擔心數位教學會佔用課業複習時間。我希望能從指引或工作坊中，找到能兼顧「數位學習」與「會考成績」的雙贏策略。",
+      "review": {
+        "confirmedAt": "2026-08-25T02:57:57Z",
+        "confirmedBy": "desktop-user",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    }
+  ]
+}

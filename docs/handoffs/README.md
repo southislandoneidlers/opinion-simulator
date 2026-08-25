@@ -10,6 +10,7 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-08-24 | Preflight human-readable report | Complete | [2026-08-24-preflight-human-readable.md](2026-08-24-preflight-human-readable.md) |
 | 2026-08-24 | Desktop asset base path fix | Complete | [2026-08-24-desktop-asset-base-fix.md](2026-08-24-desktop-asset-base-fix.md) |
 | 2026-08-24 | Desktop white-screen fix | Complete | [2026-08-24-desktop-white-screen-fix.md](2026-08-24-desktop-white-screen-fix.md) |
 | 2026-08-24 | Incident: mass deletion and recovery | Complete | [2026-08-24-incident-mass-deletion-and-recovery.md](2026-08-24-incident-mass-deletion-and-recovery.md) |
