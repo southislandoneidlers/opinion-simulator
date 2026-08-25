@@ -1,0 +1,145 @@
+:root {
+  color-scheme: light;
+  font-family: "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f8;
+  color: #1c1e21;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+nav {
+  width: 180px;
+  padding: 16px 12px;
+  background: #23272d;
+  color: #fff;
+}
+
+nav p {
+  font-weight: 700;
+  margin: 4px 8px 16px;
+}
+
+nav button {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #cfd4da;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+nav button:hover {
+  background: #33383f;
+}
+
+nav button.active {
+  background: #3b6ea5;
+  color: #fff;
+}
+
+main {
+  flex: 1;
+  padding: 20px 28px;
+  max-width: 900px;
+}
+
+.banner {
+  background: #fff3cd;
+  border: 1px solid #e0c36a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e5e9;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+}
+
+.card h1 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.card h2 {
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+label {
+  display: block;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+input,
+textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #c9ced4;
+  border-radius: 6px;
+  font: inherit;
+}
+
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+label input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin-right: 8px;
+}
+
+button {
+  padding: 8px 14px;
+  border: 1px solid #c9ced4;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+button.primary {
+  background: #3b6ea5;
+  border-color: #3b6ea5;
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+pre {
+  background: #f2f3f5;
+  border: 1px solid #e2e5e9;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

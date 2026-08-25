@@ -1,5 +1,5 @@
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import {
   DISCLAIMER,
@@ -265,9 +265,22 @@ export function writeCompletedRun(input: {
   atomicWrite(join(staging, "reports", `${input.reportId}.md`), report);
   atomicWrite(join(staging, "methodology.md"), methodology);
   writeChecksums(staging);
-  rmSync(input.projectDirectory, { recursive: true, force: true });
-  mkdirSync(dirname(input.projectDirectory), { recursive: true });
-  renameSync(staging, input.projectDirectory);
+  // Safety guard (added after the 2026-08-24 accidental mass deletion):
+  // the target must be absent or an EMPTY directory. This tool never deletes
+  // existing content; a non-empty target is a user mistake and must fail.
+  const target = resolve(input.projectDirectory);
+  if (existsSync(target)) {
+    const remaining = readdirSync(target);
+    if (remaining.length > 0) {
+      rmSync(staging, { recursive: true, force: true });
+      throw new Error(
+        `Refusing to write: ${target} exists and is not empty. Choose an empty directory; existing content is never deleted.`
+      );
+    }
+    rmdirSync(target);
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  renameSync(staging, target);
 }
 
 export function readSnapshot(projectDirectory: string): ProjectSnapshot {

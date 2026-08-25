@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -98,5 +98,85 @@ describe("writeCompletedRun", () => {
     );
     expect(JSON.parse(python).status).toBe("valid");
     expect(python).not.toMatch(/apiKey|GEMINI_API_KEY/i);
+  });
+});
+
+describe("writeCompletedRun safety guard", () => {
+  it("refuses to write into a non-empty directory and leaves it untouched", () => {
+    const parent = mkdtempSync(join(tmpdir(), "opinion-simulator-guard-"));
+    const target = join(parent, "project");
+    mkdirSync(target);
+    writeFileSync(join(target, "sentinel.txt"), "keep", "utf8");
+    const createdAt = "2026-08-24T07:00:00Z";
+    const persona = confirmManualPersona({
+      id: "persona-version-guard-v1",
+      personaId: "persona-guard",
+      label: "政策分析師",
+      rawInput: "我是政策分析師。",
+      fields: { roleAndContext: "我是政策分析師" },
+      confirmedAt: createdAt,
+      confirmedBy: "test",
+      realPersonApplies: false
+    });
+    const questionSet = {
+      id: "questions-guard-001",
+      title: "評估",
+      questions: ["你會支持嗎？"],
+      responseInstructions: ""
+    };
+    const plan = makeExecutionPlan({
+      sourceId: "source-guard-001",
+      sourceText: "材料內容。",
+      persona,
+      questionSet,
+      settings: {
+        provider: "gemini",
+        model: "gemini-2.0-flash",
+        endpointClass: "google-generativelanguage",
+        sampleCount: 1,
+        temperature: null,
+        maxOutputTokens: null,
+        seed: null
+      },
+      runId: "run-guard-001"
+    });
+    const { result, rawResponse } = mockGeminiResult({
+      sourceId: "source-guard-001",
+      sourceText: "材料內容。",
+      questions: questionSet.questions
+    });
+    expect(() =>
+      writeCompletedRun({
+        projectDirectory: target,
+        projectId: "project-guard-001",
+        title: "防護測試",
+        description: "guard fixture",
+        locale: "zh-TW",
+        createdAt,
+        completedAt: "2026-08-24T07:01:00Z",
+        sourceId: "source-guard-001",
+        sourceText: "材料內容。",
+        persona,
+        questionSet,
+        plan,
+        planHash: planHash(plan),
+        runId: "run-guard-001",
+        reportId: "report-guard-001",
+        sampleId: plan.sampleIds[0],
+        result,
+        rawResponse,
+        provider: "gemini",
+        model: "gemini-2.0-flash",
+        approval: {
+          schemaVersion: "0.0",
+          runId: "run-guard-001",
+          planHash: planHash(plan),
+          approvedAt: createdAt,
+          acknowledgedDisclaimer: true,
+          realPersonReconfirmed: false
+        }
+      })
+    ).toThrow(/not empty/);
+    expect(readdirSync(target)).toEqual(["sentinel.txt"]);
   });
 });
