@@ -1,0 +1,45 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-skill",
+    "writerVersion": "0.0.0"
+  },
+  "createdAt": "2026-08-24T06:49:28Z",
+  "currentPersonaVersionIds": [
+    "persona-version-taipei-principal-rerun-v1",
+    "persona-version-central-public-elementary-principal-v1",
+    "persona-version-southern-private-secondary-principal-v1"
+  ],
+  "description": "v0.0 selected-Result Synthesis tracer from 測驗用-複驗、測驗用-專家2、測驗用-專家3。",
+  "locale": "zh-TW",
+  "projectId": "project-synthesis-20260824-001",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "9983828cbbd76433e729ba893f863f97a147f64c058a6e09a02b67f5c621dc6d",
+      "id": "default-cross-persona-synthesis",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "questions-synthesis-001",
+      "questions": [
+        "請問這些內容在教育現場是否有可能進行？"
+      ],
+      "responseInstructions": "",
+      "title": "教育現場可行性"
+    }
+  ],
+  "reportIds": [
+    "report-synthesis-20260824-001"
+  ],
+  "runIds": [
+    "run-synthesis-20260824-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-synthesis-shared"
+  ],
+  "title": "測驗用-綜整",
+  "updatedAt": "2026-08-24T06:54:54Z"
+}

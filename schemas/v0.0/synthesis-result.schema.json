@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opinion-simulator.local/schemas/v0.0/synthesis-result.schema.json",
+  "title": "Opinion Simulator Synthesis Result",
+  "type": "object",
+  "required": ["consensus", "disagreements", "uniqueViews", "validationState"],
+  "properties": {
+    "consensus": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "supportingSampleIds"],
+        "properties": {
+          "claim": {"type": "string", "minLength": 1},
+          "supportingSampleIds": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "disagreements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "views"],
+        "properties": {
+          "topic": {"type": "string", "minLength": 1},
+          "views": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["claim", "supportingSampleIds"],
+              "properties": {
+                "claim": {"type": "string", "minLength": 1},
+                "supportingSampleIds": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {"type": "string", "minLength": 1}
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "uniqueViews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "supportingSampleIds", "personaVersionId"],
+        "properties": {
+          "claim": {"type": "string", "minLength": 1},
+          "supportingSampleIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "personaVersionId": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "validationState": {"enum": ["valid", "partial", "invalid"]}
+  },
+  "additionalProperties": false
+}

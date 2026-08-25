@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opinion-simulator.local/schemas/v0.0/result.schema.json",
+  "title": "Opinion Simulator Structured Result",
+  "type": "object",
+  "required": ["position", "reasons", "concerns", "sourceMappings", "assumptions", "uncertainties", "answers", "validationState"],
+  "properties": {
+    "directReaction": {"type": "string"},
+    "position": {"type": "string"},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "concerns": {"type": "array", "items": {"type": "string"}},
+    "personaRecommendations": {"type": "array", "items": {"type": "string"}},
+    "systemSuggestions": {"type": "array", "items": {"type": "string"}},
+    "recommendations": {"type": "array", "items": {"type": "string"}},
+    "sourceMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sourceId", "excerpt", "supports"],
+        "properties": {
+          "sourceId": {"type": "string"},
+          "excerpt": {"type": "string", "minLength": 1},
+          "supports": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "uncertainties": {"type": "array", "items": {"type": "string"}},
+    "answers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question", "answer"],
+        "properties": {
+          "question": {"type": "string", "minLength": 1},
+          "answer": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "validationState": {"enum": ["valid", "partial", "invalid"]}
+  },
+  "additionalProperties": false
+}

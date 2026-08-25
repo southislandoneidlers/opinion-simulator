@@ -1,0 +1,43 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-skill",
+    "writerVersion": "0.0.0"
+  },
+  "createdAt": "2026-08-23T01:00:00Z",
+  "currentPersonaVersionIds": [
+    "persona-version-policy-analyst-v1"
+  ],
+  "description": "Synthetic quick-mode fixture",
+  "locale": "zh-TW",
+  "projectId": "project-golden-quick-001",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "c3002ad9b6cedf23c28a68d9ca939883cdd328a347ea9bf6bcd7adeea96f881d",
+      "id": "default-persona-simulation",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "questions-policy-001",
+      "questions": [
+        "你會支持這項計畫嗎？需要哪些修改？"
+      ],
+      "responseInstructions": "請區分支持理由、風險與具體修改建議。",
+      "title": "試辦計畫評估"
+    }
+  ],
+  "reportIds": [
+    "report-golden-quick-001"
+  ],
+  "runIds": [
+    "run-golden-quick-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-policy-001"
+  ],
+  "title": "成人疫苗推廣意見模擬",
+  "updatedAt": "2026-08-23T01:12:00Z"
+}

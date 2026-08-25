@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "0.0",
+  "project": {
+    "projectId": "project-golden-stability-001",
+    "title": "成人疫苗推廣穩定性模擬",
+    "description": "Synthetic stability-mode fixture",
+    "locale": "zh-TW",
+    "createdAt": "2026-08-23T02:00:00Z"
+  },
+  "source": {
+    "sourceId": "source-policy-001",
+    "filename": "pasted-policy.txt",
+    "mediaType": "text/plain",
+    "text": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
+    "recordedAt": "2026-08-23T02:01:00Z"
+  },
+  "persona": {
+    "id": "persona-version-policy-analyst-v1",
+    "personaId": "persona-policy-analyst",
+    "version": 1,
+    "status": "confirmed",
+    "label": "地方衛生政策分析師",
+    "fields": {
+      "roleAndContext": "某市衛生局的政策分析師",
+      "goalsAndInterests": "希望政策能提高成人疫苗接種率",
+      "concerns": "在意預算透明與第一線人力負擔",
+      "responseStyle": "務實、簡潔"
+    },
+    "rawInput": "我是某市衛生局的政策分析師，希望政策能提高成人疫苗接種率，但很在意預算透明與第一線人力負擔。請用務實、簡潔的方式說明。",
+    "directMappings": [
+      {"field": "roleAndContext", "sourcePassage": "我是某市衛生局的政策分析師"},
+      {"field": "goalsAndInterests", "sourcePassage": "希望政策能提高成人疫苗接種率"},
+      {"field": "concerns", "sourcePassage": "很在意預算透明與第一線人力負擔"},
+      {"field": "responseStyle", "sourcePassage": "務實、簡潔"}
+    ],
+    "notProvidedFields": ["constraintsAndResources", "knowledgeAndExperience", "valuesAndDecisionStyle", "notes"],
+    "inferences": [
+      {
+        "id": "inference-phased-pilot",
+        "field": "valuesAndDecisionStyle",
+        "proposedValue": "偏好分階段試辦",
+        "rationale": "務實可能意味偏好先試辦，但原文沒有直接說明決策偏好。",
+        "sourcePassage": "務實、簡潔",
+        "decision": "rejected"
+      }
+    ],
+    "provenance": {"method": "user-authored synthetic fixture"},
+    "review": {
+      "confirmedAt": "2026-08-23T02:05:00Z",
+      "confirmedBy": "fixture-user",
+      "realPerson": {"applies": false, "warningAcknowledgedAt": null}
+    },
+    "createdAt": "2026-08-23T02:05:00Z"
+  },
+  "questionSet": {
+    "id": "questions-policy-001",
+    "title": "試辦計畫評估",
+    "questions": ["你會支持這項計畫嗎？需要哪些修改？"],
+    "responseInstructions": "請區分支持理由、風險與具體修改建議。"
+  },
+  "template": {"id": "default-persona-simulation", "version": 1},
+  "execution": {
+    "runId": "run-golden-stability-001",
+    "reportId": "report-golden-stability-001",
+    "createdAt": "2026-08-23T02:10:00Z",
+    "startedAt": "2026-08-23T02:11:00Z",
+    "completedAt": "2026-08-23T02:14:00Z",
+    "preflightCreatedAt": "2026-08-23T02:09:00Z",
+    "skillVersion": "0.0.0",
+    "provider": "agent-host",
+    "model": "fixture-agent-model",
+    "endpointClass": "local-test-fixture",
+    "sampleCount": 3,
+    "settings": {"temperature": null, "maxOutputTokens": null, "seed": null},
+    "truncation": {"strategy": "none", "applied": false}
+  }
+}

@@ -1,0 +1,497 @@
+{
+  "completedAt": "2026-08-23T02:14:00Z",
+  "createdAt": "2026-08-23T02:10:00Z",
+  "executionPlan": {
+    "endpointClass": "local-test-fixture",
+    "estimate": {
+      "approximateInputTokensPerRequest": 529,
+      "inputCharactersPerRequest": 2113,
+      "method": "character-count-divided-by-four; non-billing heuristic",
+      "requestCount": 3
+    },
+    "model": "fixture-agent-model",
+    "personaRefs": [
+      {
+        "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      }
+    ],
+    "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+    "preflightApproval": {
+      "acknowledgedDisclaimer": true,
+      "approvedAt": "2026-08-23T02:10:30Z",
+      "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+      "realPersonReconfirmed": false,
+      "runId": "run-golden-stability-001",
+      "schemaVersion": "0.0"
+    },
+    "promptTemplate": {
+      "contentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638",
+      "id": "default-persona-simulation",
+      "version": 1
+    },
+    "provider": "agent-host",
+    "questionSet": {
+      "id": "questions-policy-001",
+      "questions": [
+        "你會支持這項計畫嗎？需要哪些修改？"
+      ],
+      "responseInstructions": "請區分支持理由、風險與具體修改建議。",
+      "title": "試辦計畫評估"
+    },
+    "renderedPromptSections": {
+      "modelAndSampling": "{\n  \"model\": \"fixture-agent-model\",\n  \"provider\": \"agent-host\",\n  \"sampleCount\": 3,\n  \"settings\": {\n    \"maxOutputTokens\": null,\n    \"seed\": null,\n    \"temperature\": null\n  },\n  \"truncation\": {\n    \"applied\": false,\n    \"strategy\": \"none\"\n  }\n}",
+      "outputSchema": "{\n  \"answers\": [\n    {\n      \"answer\": \"string\",\n      \"question\": \"exact user question\"\n    }\n  ],\n  \"assumptions\": [\n    \"string\"\n  ],\n  \"concerns\": [\n    \"string\"\n  ],\n  \"directReaction\": \"natural-language Persona reaction\",\n  \"personaRecommendations\": [\n    \"string\"\n  ],\n  \"position\": \"string\",\n  \"reasons\": [\n    \"string\"\n  ],\n  \"sourceMappings\": [\n    {\n      \"excerpt\": \"exact text\",\n      \"sourceId\": \"source-policy-001\",\n      \"supports\": \"claim\"\n    }\n  ],\n  \"systemSuggestions\": [\n    \"string\"\n  ],\n  \"uncertainties\": [\n    \"string\"\n  ],\n  \"validationState\": \"valid | partial | invalid\"\n}",
+      "persona": "{\n  \"acceptedInferences\": [],\n  \"fields\": {\n    \"concerns\": \"在意預算透明與第一線人力負擔\",\n    \"goalsAndInterests\": \"希望政策能提高成人疫苗接種率\",\n    \"responseStyle\": \"務實、簡潔\",\n    \"roleAndContext\": \"某市衛生局的政策分析師\"\n  },\n  \"label\": \"地方衛生政策分析師\",\n  \"notProvidedFields\": [\n    \"constraintsAndResources\",\n    \"knowledgeAndExperience\",\n    \"valuesAndDecisionStyle\",\n    \"notes\"\n  ],\n  \"personaVersionId\": \"persona-version-policy-analyst-v1\"\n}",
+      "questions": "1. 你會支持這項計畫嗎？需要哪些修改？\n\nResponse instructions: 請區分支持理由、風險與具體修改建議。",
+      "sourceMaterial": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
+      "systemAndTaskRules": "Predict a possible response conditioned only on the confirmed Persona and supplied Source.\nLead with a natural-language Direct Reaction in the confirmed Persona's voice.\nDo not add missing Persona facts or present the output as a real quotation.\nPut simulated Persona Recommendations and System Suggestions in separate fields; never merge them into one unlabeled list.\nSeparate source-supported observations from assumptions and uncertainty.\nReturn the requested structured Result. Preserve the user's question language.\nAI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks."
+    },
+    "sampleCount": 3,
+    "sampleIds": [
+      "run-golden-stability-001-sample-001",
+      "run-golden-stability-001-sample-002",
+      "run-golden-stability-001-sample-003"
+    ],
+    "settings": {
+      "maxOutputTokens": null,
+      "seed": null,
+      "temperature": null
+    },
+    "sourceRefs": [
+      {
+        "sha256": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7",
+        "sourceId": "source-policy-001"
+      }
+    ],
+    "truncation": {
+      "applied": false,
+      "strategy": "none"
+    }
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "personaContentHashes": {
+      "persona-version-policy-analyst-v1": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b"
+    },
+    "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+    "sourceHashes": {
+      "source-policy-001": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7"
+    },
+    "templateContentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638"
+  },
+  "kind": "persona-simulation",
+  "projectId": "project-golden-stability-001",
+  "report": {
+    "createdAt": "2026-08-23T02:14:00Z",
+    "disclaimer": "AI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks.",
+    "generationMethod": "deterministic-v0.0",
+    "path": "reports/report-golden-stability-001.md",
+    "reportId": "report-golden-stability-001"
+  },
+  "runId": "run-golden-stability-001",
+  "samples": [
+    {
+      "attemptEvents": [
+        {
+          "attempt": 1,
+          "error": null,
+          "status": "completed",
+          "timestamp": "2026-08-23T02:11:02Z"
+        }
+      ],
+      "completedAt": "2026-08-23T02:11:02Z",
+      "latencyMs": 2000,
+      "normalizedRequest": {
+        "model": "fixture-agent-model",
+        "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+        "provider": "agent-host",
+        "runId": "run-golden-stability-001",
+        "sampleId": "run-golden-stability-001-sample-001"
+      },
+      "normalizedResponse": {
+        "model": "fixture-agent-model",
+        "provider": "agent-host",
+        "responseFormat": "structured-json",
+        "validationState": "valid"
+      },
+      "parsedResult": {
+        "answers": [
+          {
+            "answer": "有條件支持，需補充人力配套。",
+            "question": "你會支持這項計畫嗎？需要哪些修改？"
+          }
+        ],
+        "assumptions": [
+          "假設試辦結果會被正式檢討。"
+        ],
+        "concerns": [
+          "計畫尚未說明新增人力來源。"
+        ],
+        "directReaction": "有條件支持，先試辦並補足人力規劃。",
+        "personaRecommendations": [
+          "執行前提出衛生所人力與排班配套。"
+        ],
+        "position": "有條件支持三區試辦。",
+        "reasons": [
+          "分階段推動可降低執行風險。",
+          "公開支出有助於透明。"
+        ],
+        "sourceMappings": [
+          {
+            "excerpt": "第一階段先在三個行政區試辦",
+            "sourceId": "source-policy-001",
+            "supports": "可先控制執行範圍"
+          },
+          {
+            "excerpt": "計畫尚未說明新增人力來源",
+            "sourceId": "source-policy-001",
+            "supports": "人力配套仍不明確"
+          }
+        ],
+        "systemSuggestions": [
+          "系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"
+        ],
+        "uncertainties": [
+          "缺少現有人力基準。"
+        ],
+        "validationState": "valid"
+      },
+      "personaRef": {
+        "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      },
+      "providerUsage": {
+        "inputTokens": 430,
+        "outputTokens": 170
+      },
+      "rawProviderResponse": {
+        "text": "有條件支持，先試辦並補足人力規劃。"
+      },
+      "sampleId": "run-golden-stability-001-sample-001",
+      "startedAt": "2026-08-23T02:11:00Z",
+      "status": "completed",
+      "validationWarnings": []
+    },
+    {
+      "attemptEvents": [
+        {
+          "attempt": 1,
+          "error": null,
+          "status": "completed",
+          "timestamp": "2026-08-23T02:12:02Z"
+        }
+      ],
+      "completedAt": "2026-08-23T02:12:02Z",
+      "latencyMs": 2000,
+      "normalizedRequest": {
+        "model": "fixture-agent-model",
+        "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+        "provider": "agent-host",
+        "runId": "run-golden-stability-001",
+        "sampleId": "run-golden-stability-001-sample-002"
+      },
+      "normalizedResponse": {
+        "model": "fixture-agent-model",
+        "provider": "agent-host",
+        "responseFormat": "structured-json",
+        "validationState": "valid"
+      },
+      "parsedResult": {
+        "answers": [
+          {
+            "answer": "有條件支持，先估算排班成本。",
+            "question": "你會支持這項計畫嗎？需要哪些修改？"
+          }
+        ],
+        "assumptions": [
+          "假設行政區具有代表性。"
+        ],
+        "concerns": [
+          "排班調整可能增加第一線負擔。"
+        ],
+        "directReaction": "支持有限試辦，但應先提出排班成本。",
+        "personaRecommendations": [
+          "先估算各衛生所的新增工時。"
+        ],
+        "position": "有條件支持三區試辦。",
+        "reasons": [
+          "分階段推動可降低執行風險。",
+          "公開接種人次便於追蹤成效。"
+        ],
+        "sourceMappings": [
+          {
+            "excerpt": "第一階段先在三個行政區試辦",
+            "sourceId": "source-policy-001",
+            "supports": "可先控制執行範圍"
+          },
+          {
+            "excerpt": "各衛生所需調整排班",
+            "sourceId": "source-policy-001",
+            "supports": "可能增加第一線負擔"
+          }
+        ],
+        "systemSuggestions": [
+          "系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"
+        ],
+        "uncertainties": [
+          "未提供新增工時成本。"
+        ],
+        "validationState": "valid"
+      },
+      "personaRef": {
+        "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      },
+      "providerUsage": {
+        "inputTokens": 428,
+        "outputTokens": 165
+      },
+      "rawProviderResponse": {
+        "text": "支持有限試辦，但應先提出排班成本。"
+      },
+      "sampleId": "run-golden-stability-001-sample-002",
+      "startedAt": "2026-08-23T02:12:00Z",
+      "status": "completed",
+      "validationWarnings": []
+    },
+    {
+      "attemptEvents": [
+        {
+          "attempt": 1,
+          "error": null,
+          "status": "completed",
+          "timestamp": "2026-08-23T02:13:02Z"
+        }
+      ],
+      "completedAt": "2026-08-23T02:13:02Z",
+      "latencyMs": 2000,
+      "normalizedRequest": {
+        "model": "fixture-agent-model",
+        "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+        "provider": "agent-host",
+        "runId": "run-golden-stability-001",
+        "sampleId": "run-golden-stability-001-sample-003"
+      },
+      "normalizedResponse": {
+        "model": "fixture-agent-model",
+        "provider": "agent-host",
+        "responseFormat": "structured-json",
+        "validationState": "valid"
+      },
+      "parsedResult": {
+        "answers": [
+          {
+            "answer": "有條件支持，透明機制需納入人力成本。",
+            "question": "你會支持這項計畫嗎？需要哪些修改？"
+          }
+        ],
+        "assumptions": [
+          "假設公開支出欄位可以調整。"
+        ],
+        "concerns": [
+          "公開資料可能未包含完整人力成本。"
+        ],
+        "directReaction": "可接受試辦，但透明機制要包含人力成本。",
+        "personaRecommendations": [
+          "每月公開報表應納入新增人力與加班成本。"
+        ],
+        "position": "有條件支持三區試辦。",
+        "reasons": [
+          "分階段推動可降低執行風險。",
+          "每月公開資料便於外部檢視。"
+        ],
+        "sourceMappings": [
+          {
+            "excerpt": "第一階段先在三個行政區試辦",
+            "sourceId": "source-policy-001",
+            "supports": "可先控制執行範圍"
+          },
+          {
+            "excerpt": "公開每月支出與接種人次",
+            "sourceId": "source-policy-001",
+            "supports": "已有公開資料機制"
+          }
+        ],
+        "systemSuggestions": [
+          "系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"
+        ],
+        "uncertainties": [
+          "不知道目前支出分類。"
+        ],
+        "validationState": "valid"
+      },
+      "personaRef": {
+        "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      },
+      "providerUsage": {
+        "inputTokens": 432,
+        "outputTokens": 175
+      },
+      "rawProviderResponse": {
+        "text": "可接受試辦，但透明機制要包含人力成本。"
+      },
+      "sampleId": "run-golden-stability-001-sample-003",
+      "startedAt": "2026-08-23T02:13:00Z",
+      "status": "completed",
+      "validationWarnings": []
+    }
+  ],
+  "schemaVersion": "0.0",
+  "skillVersion": "0.0.0",
+  "stabilityComparison": {
+    "anomalies": [],
+    "consistentThemes": [
+      {
+        "field": "position",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001",
+          "run-golden-stability-001-sample-002",
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "有條件支持三區試辦。"
+      },
+      {
+        "field": "reasons",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001",
+          "run-golden-stability-001-sample-002",
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "分階段推動可降低執行風險。"
+      },
+      {
+        "field": "systemSuggestions",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001",
+          "run-golden-stability-001-sample-002",
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"
+      }
+    ],
+    "divergentThemes": [
+      {
+        "field": "concerns",
+        "sampleIds": [
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "公開資料可能未包含完整人力成本。"
+      },
+      {
+        "field": "concerns",
+        "sampleIds": [
+          "run-golden-stability-001-sample-002"
+        ],
+        "text": "排班調整可能增加第一線負擔。"
+      },
+      {
+        "field": "concerns",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001"
+        ],
+        "text": "計畫尚未說明新增人力來源。"
+      },
+      {
+        "field": "directReaction",
+        "sampleIds": [
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "可接受試辦，但透明機制要包含人力成本。"
+      },
+      {
+        "field": "directReaction",
+        "sampleIds": [
+          "run-golden-stability-001-sample-002"
+        ],
+        "text": "支持有限試辦，但應先提出排班成本。"
+      },
+      {
+        "field": "directReaction",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001"
+        ],
+        "text": "有條件支持，先試辦並補足人力規劃。"
+      },
+      {
+        "field": "personaRecommendations",
+        "sampleIds": [
+          "run-golden-stability-001-sample-002"
+        ],
+        "text": "先估算各衛生所的新增工時。"
+      },
+      {
+        "field": "personaRecommendations",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001"
+        ],
+        "text": "執行前提出衛生所人力與排班配套。"
+      },
+      {
+        "field": "personaRecommendations",
+        "sampleIds": [
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "每月公開報表應納入新增人力與加班成本。"
+      },
+      {
+        "field": "reasons",
+        "sampleIds": [
+          "run-golden-stability-001-sample-002"
+        ],
+        "text": "公開接種人次便於追蹤成效。"
+      },
+      {
+        "field": "reasons",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001"
+        ],
+        "text": "公開支出有助於透明。"
+      },
+      {
+        "field": "reasons",
+        "sampleIds": [
+          "run-golden-stability-001-sample-003"
+        ],
+        "text": "每月公開資料便於外部檢視。"
+      }
+    ],
+    "limitation": "Exact normalized text matching surfaces repetition and divergence but is not semantic equivalence or a numeric confidence measure.",
+    "mode": "three-sample-exact-normalized-comparison",
+    "sourceMappingDifferences": [
+      {
+        "excerpt": "公開每月支出與接種人次",
+        "sampleIds": [
+          "run-golden-stability-001-sample-003"
+        ],
+        "sourceId": "source-policy-001"
+      },
+      {
+        "excerpt": "各衛生所需調整排班",
+        "sampleIds": [
+          "run-golden-stability-001-sample-002"
+        ],
+        "sourceId": "source-policy-001"
+      },
+      {
+        "excerpt": "計畫尚未說明新增人力來源",
+        "sampleIds": [
+          "run-golden-stability-001-sample-001"
+        ],
+        "sourceId": "source-policy-001"
+      }
+    ]
+  },
+  "startedAt": "2026-08-23T02:11:00Z",
+  "status": "completed",
+  "synthesisAttribution": null
+}

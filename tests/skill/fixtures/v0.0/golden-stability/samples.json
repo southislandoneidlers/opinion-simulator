@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "0.0",
+  "runId": "run-golden-stability-001",
+  "samples": [
+    {
+      "sampleId": "run-golden-stability-001-sample-001",
+      "status": "completed",
+      "startedAt": "2026-08-23T02:11:00Z",
+      "completedAt": "2026-08-23T02:11:02Z",
+      "latencyMs": 2000,
+      "rawProviderResponse": {"text": "有條件支持，先試辦並補足人力規劃。"},
+      "parsedResult": {
+        "directReaction": "有條件支持，先試辦並補足人力規劃。",
+        "position": "有條件支持三區試辦。",
+        "reasons": ["分階段推動可降低執行風險。", "公開支出有助於透明。"],
+        "concerns": ["計畫尚未說明新增人力來源。"],
+        "personaRecommendations": ["執行前提出衛生所人力與排班配套。"],
+        "systemSuggestions": ["系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"],
+        "sourceMappings": [
+          {"sourceId": "source-policy-001", "excerpt": "第一階段先在三個行政區試辦", "supports": "可先控制執行範圍"},
+          {"sourceId": "source-policy-001", "excerpt": "計畫尚未說明新增人力來源", "supports": "人力配套仍不明確"}
+        ],
+        "assumptions": ["假設試辦結果會被正式檢討。"],
+        "uncertainties": ["缺少現有人力基準。"],
+        "answers": [{"question": "你會支持這項計畫嗎？需要哪些修改？", "answer": "有條件支持，需補充人力配套。"}],
+        "validationState": "valid"
+      },
+      "validationWarnings": [],
+      "providerUsage": {"inputTokens": 430, "outputTokens": 170}
+    },
+    {
+      "sampleId": "run-golden-stability-001-sample-002",
+      "status": "completed",
+      "startedAt": "2026-08-23T02:12:00Z",
+      "completedAt": "2026-08-23T02:12:02Z",
+      "latencyMs": 2000,
+      "rawProviderResponse": {"text": "支持有限試辦，但應先提出排班成本。"},
+      "parsedResult": {
+        "directReaction": "支持有限試辦，但應先提出排班成本。",
+        "position": "有條件支持三區試辦。",
+        "reasons": ["分階段推動可降低執行風險。", "公開接種人次便於追蹤成效。"],
+        "concerns": ["排班調整可能增加第一線負擔。"],
+        "personaRecommendations": ["先估算各衛生所的新增工時。"],
+        "systemSuggestions": ["系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"],
+        "sourceMappings": [
+          {"sourceId": "source-policy-001", "excerpt": "第一階段先在三個行政區試辦", "supports": "可先控制執行範圍"},
+          {"sourceId": "source-policy-001", "excerpt": "各衛生所需調整排班", "supports": "可能增加第一線負擔"}
+        ],
+        "assumptions": ["假設行政區具有代表性。"],
+        "uncertainties": ["未提供新增工時成本。"],
+        "answers": [{"question": "你會支持這項計畫嗎？需要哪些修改？", "answer": "有條件支持，先估算排班成本。"}],
+        "validationState": "valid"
+      },
+      "validationWarnings": [],
+      "providerUsage": {"inputTokens": 428, "outputTokens": 165}
+    },
+    {
+      "sampleId": "run-golden-stability-001-sample-003",
+      "status": "completed",
+      "startedAt": "2026-08-23T02:13:00Z",
+      "completedAt": "2026-08-23T02:13:02Z",
+      "latencyMs": 2000,
+      "rawProviderResponse": {"text": "可接受試辦，但透明機制要包含人力成本。"},
+      "parsedResult": {
+        "directReaction": "可接受試辦，但透明機制要包含人力成本。",
+        "position": "有條件支持三區試辦。",
+        "reasons": ["分階段推動可降低執行風險。", "每月公開資料便於外部檢視。"],
+        "concerns": ["公開資料可能未包含完整人力成本。"],
+        "personaRecommendations": ["每月公開報表應納入新增人力與加班成本。"],
+        "systemSuggestions": ["系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"],
+        "sourceMappings": [
+          {"sourceId": "source-policy-001", "excerpt": "第一階段先在三個行政區試辦", "supports": "可先控制執行範圍"},
+          {"sourceId": "source-policy-001", "excerpt": "公開每月支出與接種人次", "supports": "已有公開資料機制"}
+        ],
+        "assumptions": ["假設公開支出欄位可以調整。"],
+        "uncertainties": ["不知道目前支出分類。"],
+        "answers": [{"question": "你會支持這項計畫嗎？需要哪些修改？", "answer": "有條件支持，透明機制需納入人力成本。"}],
+        "validationState": "valid"
+      },
+      "validationWarnings": [],
+      "providerUsage": {"inputTokens": 432, "outputTokens": 175}
+    }
+  ]
+}

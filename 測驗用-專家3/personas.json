@@ -1,0 +1,54 @@
+{
+  "drafts": [],
+  "schemaVersion": "0.0",
+  "versions": [
+    {
+      "contentHash": "14ae5e0c91e508f900ab93db4c07e54f44ce6b8bee66ccf1d5adaea7b26512a3",
+      "createdAt": "2026-08-24T06:28:01Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "南部私立中學校長。學校位於屏東，招生範圍廣大，住校生多。"
+        },
+        {
+          "field": "goalsAndInterests",
+          "sourcePassage": "利用數位學習平台做好課後輔導與學生的學習進度追蹤"
+        },
+        {
+          "field": "concerns",
+          "sourcePassage": "讓家長即使離得遠也能了解孩子的學習狀況"
+        }
+      ],
+      "fields": {
+        "concerns": "讓家長即使離得遠也能了解孩子的學習狀況",
+        "goalsAndInterests": "利用數位學習平台做好課後輔導與學生的學習進度追蹤",
+        "roleAndContext": "南部私立中學校長。學校位於屏東，招生範圍廣大，住校生多。"
+      },
+      "id": "persona-version-southern-private-secondary-principal-v1",
+      "inferences": [],
+      "label": "南部私立中學校長（合成）",
+      "notProvidedFields": [
+        "constraintsAndResources",
+        "knowledgeAndExperience",
+        "valuesAndDecisionStyle",
+        "responseStyle",
+        "notes"
+      ],
+      "personaId": "persona-southern-private-secondary-principal",
+      "provenance": {
+        "method": "user-proxied expert Persona; title prepended to rawInput by explicit proxy confirmation"
+      },
+      "rawInput": "南部私立中學校長。學校位於屏東，招生範圍廣大，住校生多。我關心如何利用數位學習平台做好課後輔導與學生的學習進度追蹤，並讓家長即使離得遠也能了解孩子的學習狀況",
+      "review": {
+        "confirmedAt": "2026-08-24T06:28:01Z",
+        "confirmedBy": "walkthrough-proxy-for-expert-3",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    }
+  ]
+}

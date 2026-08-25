@@ -1,0 +1,43 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-skill",
+    "writerVersion": "0.0.0"
+  },
+  "createdAt": "2026-08-24T01:37:24Z",
+  "currentPersonaVersionIds": [
+    "persona-version-taipei-principal-v1"
+  ],
+  "description": "第一次真實 agent-host expert walkthrough；使用合成、非敏感 pasted Source 與 Persona。",
+  "locale": "zh-TW",
+  "projectId": "project-walkthrough-20260824-001",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "c3002ad9b6cedf23c28a68d9ca939883cdd328a347ea9bf6bcd7adeea96f881d",
+      "id": "default-persona-simulation",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "questions-feasibility-20260824-001",
+      "questions": [
+        "請問這些內容在教育現場是否有可能進行？"
+      ],
+      "responseInstructions": "",
+      "title": "教育現場可行性"
+    }
+  ],
+  "reportIds": [
+    "report-walkthrough-20260824-001"
+  ],
+  "runIds": [
+    "run-walkthrough-20260824-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-guideline-20260824-001"
+  ],
+  "title": "測驗用",
+  "updatedAt": "2026-08-24T01:42:36Z"
+}

@@ -1,0 +1,43 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-skill",
+    "writerVersion": "0.0.0"
+  },
+  "createdAt": "2026-08-24T03:09:26Z",
+  "currentPersonaVersionIds": [
+    "persona-version-taipei-principal-rerun-v1"
+  ],
+  "description": "第二次 expert walkthrough：同一專家複驗 Direct Reaction／report 增量；合成、非敏感 pasted Source。",
+  "locale": "zh-TW",
+  "projectId": "project-walkthrough-rerun-20260824-001",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638",
+      "id": "default-persona-simulation",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "questions-feasibility-20260824-002",
+      "questions": [
+        "請問這些內容在教育現場是否有可能進行？"
+      ],
+      "responseInstructions": "",
+      "title": "教育現場可行性"
+    }
+  ],
+  "reportIds": [
+    "report-walkthrough-rerun-20260824-001"
+  ],
+  "runIds": [
+    "run-walkthrough-rerun-20260824-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-guideline-20260824-002"
+  ],
+  "title": "測驗用-複驗",
+  "updatedAt": "2026-08-24T03:11:18Z"
+}

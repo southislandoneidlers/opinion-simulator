@@ -1,0 +1,111 @@
+{
+  "approvalStatus": "pending",
+  "createdAt": "2026-08-23T02:09:00Z",
+  "destination": {
+    "endpointClass": "local-test-fixture",
+    "model": "fixture-agent-model",
+    "provider": "agent-host"
+  },
+  "estimate": {
+    "approximateInputTokensPerRequest": 529,
+    "inputCharactersPerRequest": 2113,
+    "method": "character-count-divided-by-four; non-billing heuristic",
+    "requestCount": 3
+  },
+  "outbound": {
+    "personaVersion": {
+      "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+      "createdAt": "2026-08-23T02:05:00Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "我是某市衛生局的政策分析師"
+        },
+        {
+          "field": "goalsAndInterests",
+          "sourcePassage": "希望政策能提高成人疫苗接種率"
+        },
+        {
+          "field": "concerns",
+          "sourcePassage": "很在意預算透明與第一線人力負擔"
+        },
+        {
+          "field": "responseStyle",
+          "sourcePassage": "務實、簡潔"
+        }
+      ],
+      "fields": {
+        "concerns": "在意預算透明與第一線人力負擔",
+        "goalsAndInterests": "希望政策能提高成人疫苗接種率",
+        "responseStyle": "務實、簡潔",
+        "roleAndContext": "某市衛生局的政策分析師"
+      },
+      "id": "persona-version-policy-analyst-v1",
+      "inferences": [
+        {
+          "decision": "rejected",
+          "field": "valuesAndDecisionStyle",
+          "id": "inference-phased-pilot",
+          "proposedValue": "偏好分階段試辦",
+          "rationale": "務實可能意味偏好先試辦，但原文沒有直接說明決策偏好。",
+          "sourcePassage": "務實、簡潔"
+        }
+      ],
+      "label": "地方衛生政策分析師",
+      "notProvidedFields": [
+        "constraintsAndResources",
+        "knowledgeAndExperience",
+        "valuesAndDecisionStyle",
+        "notes"
+      ],
+      "personaId": "persona-policy-analyst",
+      "provenance": {
+        "method": "user-authored synthetic fixture"
+      },
+      "rawInput": "我是某市衛生局的政策分析師，希望政策能提高成人疫苗接種率，但很在意預算透明與第一線人力負擔。請用務實、簡潔的方式說明。",
+      "review": {
+        "confirmedAt": "2026-08-23T02:05:00Z",
+        "confirmedBy": "fixture-user",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    },
+    "promptSections": {
+      "modelAndSampling": "{\n  \"model\": \"fixture-agent-model\",\n  \"provider\": \"agent-host\",\n  \"sampleCount\": 3,\n  \"settings\": {\n    \"maxOutputTokens\": null,\n    \"seed\": null,\n    \"temperature\": null\n  },\n  \"truncation\": {\n    \"applied\": false,\n    \"strategy\": \"none\"\n  }\n}",
+      "outputSchema": "{\n  \"answers\": [\n    {\n      \"answer\": \"string\",\n      \"question\": \"exact user question\"\n    }\n  ],\n  \"assumptions\": [\n    \"string\"\n  ],\n  \"concerns\": [\n    \"string\"\n  ],\n  \"directReaction\": \"natural-language Persona reaction\",\n  \"personaRecommendations\": [\n    \"string\"\n  ],\n  \"position\": \"string\",\n  \"reasons\": [\n    \"string\"\n  ],\n  \"sourceMappings\": [\n    {\n      \"excerpt\": \"exact text\",\n      \"sourceId\": \"source-policy-001\",\n      \"supports\": \"claim\"\n    }\n  ],\n  \"systemSuggestions\": [\n    \"string\"\n  ],\n  \"uncertainties\": [\n    \"string\"\n  ],\n  \"validationState\": \"valid | partial | invalid\"\n}",
+      "persona": "{\n  \"acceptedInferences\": [],\n  \"fields\": {\n    \"concerns\": \"在意預算透明與第一線人力負擔\",\n    \"goalsAndInterests\": \"希望政策能提高成人疫苗接種率\",\n    \"responseStyle\": \"務實、簡潔\",\n    \"roleAndContext\": \"某市衛生局的政策分析師\"\n  },\n  \"label\": \"地方衛生政策分析師\",\n  \"notProvidedFields\": [\n    \"constraintsAndResources\",\n    \"knowledgeAndExperience\",\n    \"valuesAndDecisionStyle\",\n    \"notes\"\n  ],\n  \"personaVersionId\": \"persona-version-policy-analyst-v1\"\n}",
+      "questions": "1. 你會支持這項計畫嗎？需要哪些修改？\n\nResponse instructions: 請區分支持理由、風險與具體修改建議。",
+      "sourceMaterial": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
+      "systemAndTaskRules": "Predict a possible response conditioned only on the confirmed Persona and supplied Source.\nLead with a natural-language Direct Reaction in the confirmed Persona's voice.\nDo not add missing Persona facts or present the output as a real quotation.\nPut simulated Persona Recommendations and System Suggestions in separate fields; never merge them into one unlabeled list.\nSeparate source-supported observations from assumptions and uncertainty.\nReturn the requested structured Result. Preserve the user's question language.\nAI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks."
+    },
+    "source": {
+      "filename": "pasted-policy.txt",
+      "sha256": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7",
+      "sourceId": "source-policy-001",
+      "text": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。"
+    }
+  },
+  "planHash": "7f6571092ff0173caa76df87a27512eb4b1ef2015a0fd10d930cf167502cf26d",
+  "predictionDisclaimer": "AI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks.",
+  "requiresRealPersonReconfirmation": false,
+  "runId": "run-golden-stability-001",
+  "sampleCount": 3,
+  "sampleIds": [
+    "run-golden-stability-001-sample-001",
+    "run-golden-stability-001-sample-002",
+    "run-golden-stability-001-sample-003"
+  ],
+  "schemaVersion": "0.0",
+  "truncation": {
+    "applied": false,
+    "strategy": "none"
+  },
+  "warnings": [
+    "v0.0 agent-host prototype: no desktop credential vault, persistent queue, or signed application boundary.",
+    "The estimate is a disclosed character-count heuristic, not provider billing data."
+  ]
+}

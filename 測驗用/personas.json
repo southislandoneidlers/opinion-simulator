@@ -1,0 +1,55 @@
+{
+  "drafts": [],
+  "schemaVersion": "0.0",
+  "versions": [
+    {
+      "contentHash": "cdbc40f6ee92ade71626cea9aa0a1db70e8033fdb719baf49962a8cdc05e7983",
+      "createdAt": "2026-08-24T01:37:24Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "台北市中學校長"
+        }
+      ],
+      "fields": {
+        "knowledgeAndExperience": "熟悉台北市中學的校務運作與教育現場",
+        "roleAndContext": "台北市中學校長"
+      },
+      "id": "persona-version-taipei-principal-v1",
+      "inferences": [
+        {
+          "decision": "accepted",
+          "field": "knowledgeAndExperience",
+          "id": "inference-knowledge-school-operations",
+          "proposedValue": "熟悉台北市中學的校務運作與教育現場",
+          "rationale": "校長職務通常意味具有校務運作與教育現場經驗，但原文未直接陳述，因此列為 inference。",
+          "sourcePassage": "台北市中學校長"
+        }
+      ],
+      "label": "台北市中學校長（合成）",
+      "notProvidedFields": [
+        "goalsAndInterests",
+        "concerns",
+        "constraintsAndResources",
+        "valuesAndDecisionStyle",
+        "responseStyle",
+        "notes"
+      ],
+      "personaId": "persona-taipei-principal",
+      "provenance": {
+        "method": "user-authored synthetic Persona; agent-organized and explicitly confirmed during expert walkthrough"
+      },
+      "rawInput": "台北市中學校長",
+      "review": {
+        "confirmedAt": "2026-08-24T01:37:24Z",
+        "confirmedBy": "walkthrough-user",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    }
+  ]
+}

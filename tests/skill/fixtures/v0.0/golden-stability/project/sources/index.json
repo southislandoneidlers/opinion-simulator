@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.0",
+  "sources": [
+    {
+      "extraction": {
+        "lineEndings": "LF",
+        "method": "pasted-text",
+        "version": "0.0"
+      },
+      "filename": "pasted-policy.txt",
+      "mediaType": "text/plain",
+      "originalCopied": false,
+      "provenance": {
+        "kind": "pasted-text",
+        "recordedAt": "2026-08-23T02:01:00Z"
+      },
+      "sourceId": "source-policy-001",
+      "textSha256": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7",
+      "warnings": []
+    }
+  ]
+}

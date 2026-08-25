@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opinion-simulator.local/schemas/v0.0/personas.schema.json",
+  "title": "Opinion Simulator Personas",
+  "type": "object",
+  "required": ["schemaVersion", "drafts", "versions"],
+  "properties": {
+    "schemaVersion": {"const": "0.0"},
+    "drafts": {"type": "array", "maxItems": 0},
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "personaId", "version", "status", "label", "fields", "rawInput", "directMappings", "notProvidedFields", "inferences", "provenance", "review", "createdAt", "contentHash"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+          "personaId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+          "version": {"type": "integer"},
+          "status": {"const": "confirmed"},
+          "label": {"type": "string", "minLength": 1},
+          "fields": {"type": "object"},
+          "rawInput": {"type": "string", "minLength": 1},
+          "directMappings": {"type": "array", "items": {"type": "object"}},
+          "notProvidedFields": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+          "inferences": {"type": "array", "items": {"type": "object"}},
+          "provenance": {"type": "object"},
+          "review": {"type": "object"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

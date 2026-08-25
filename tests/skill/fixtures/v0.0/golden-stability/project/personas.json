@@ -1,0 +1,67 @@
+{
+  "drafts": [],
+  "schemaVersion": "0.0",
+  "versions": [
+    {
+      "contentHash": "ca2c8924173b476cb10cfa9cc9f9f2895c36854d699e4b7f10ecc7df70957f2b",
+      "createdAt": "2026-08-23T02:05:00Z",
+      "directMappings": [
+        {
+          "field": "roleAndContext",
+          "sourcePassage": "我是某市衛生局的政策分析師"
+        },
+        {
+          "field": "goalsAndInterests",
+          "sourcePassage": "希望政策能提高成人疫苗接種率"
+        },
+        {
+          "field": "concerns",
+          "sourcePassage": "很在意預算透明與第一線人力負擔"
+        },
+        {
+          "field": "responseStyle",
+          "sourcePassage": "務實、簡潔"
+        }
+      ],
+      "fields": {
+        "concerns": "在意預算透明與第一線人力負擔",
+        "goalsAndInterests": "希望政策能提高成人疫苗接種率",
+        "responseStyle": "務實、簡潔",
+        "roleAndContext": "某市衛生局的政策分析師"
+      },
+      "id": "persona-version-policy-analyst-v1",
+      "inferences": [
+        {
+          "decision": "rejected",
+          "field": "valuesAndDecisionStyle",
+          "id": "inference-phased-pilot",
+          "proposedValue": "偏好分階段試辦",
+          "rationale": "務實可能意味偏好先試辦，但原文沒有直接說明決策偏好。",
+          "sourcePassage": "務實、簡潔"
+        }
+      ],
+      "label": "地方衛生政策分析師",
+      "notProvidedFields": [
+        "constraintsAndResources",
+        "knowledgeAndExperience",
+        "valuesAndDecisionStyle",
+        "notes"
+      ],
+      "personaId": "persona-policy-analyst",
+      "provenance": {
+        "method": "user-authored synthetic fixture"
+      },
+      "rawInput": "我是某市衛生局的政策分析師，希望政策能提高成人疫苗接種率，但很在意預算透明與第一線人力負擔。請用務實、簡潔的方式說明。",
+      "review": {
+        "confirmedAt": "2026-08-23T02:05:00Z",
+        "confirmedBy": "fixture-user",
+        "realPerson": {
+          "applies": false,
+          "warningAcknowledgedAt": null
+        }
+      },
+      "status": "confirmed",
+      "version": 1
+    }
+  ]
+}

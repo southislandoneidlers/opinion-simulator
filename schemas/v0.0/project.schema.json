@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opinion-simulator.local/schemas/v0.0/project.schema.json",
+  "title": "Opinion Simulator Project",
+  "type": "object",
+  "required": ["schemaVersion", "projectId", "title", "description", "locale", "createdAt", "updatedAt", "sourceIds", "currentPersonaVersionIds", "questionSets", "promptTemplateVersions", "runIds", "reportIds", "compatibility"],
+  "properties": {
+    "schemaVersion": {"const": "0.0"},
+    "projectId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "title": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "locale": {"enum": ["zh-TW", "en"]},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "updatedAt": {"type": "string", "format": "date-time"},
+    "sourceIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "currentPersonaVersionIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "questionSets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "questions", "responseInstructions"],
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string", "minLength": 1},
+          "questions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "responseInstructions": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "promptTemplateVersions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "contentHash"],
+        "properties": {
+          "id": {"type": "string"},
+          "version": {"type": "integer"},
+          "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "runIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "reportIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "compatibility": {
+      "type": "object",
+      "required": ["writer", "writerVersion", "minimumReaderVersion"],
+      "properties": {
+        "writer": {"enum": ["opinion-simulator-skill", "opinion-simulator-desktop"]},
+        "writerVersion": {"type": "string"},
+        "minimumReaderVersion": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

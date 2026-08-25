@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "0.0",
+  "runId": "run-golden-quick-001",
+  "samples": [
+    {
+      "sampleId": "run-golden-quick-001-sample-001",
+      "status": "completed",
+      "startedAt": "2026-08-23T01:11:00Z",
+      "completedAt": "2026-08-23T01:11:02Z",
+      "latencyMs": 2000,
+      "rawProviderResponse": {
+        "text": "我原則支持試辦，但應先交代新增人力與公開支出的做法。"
+      },
+      "parsedResult": {
+        "directReaction": "我原則支持試辦，但應先交代新增人力與公開支出的做法。",
+        "position": "有條件支持三區試辦。",
+        "reasons": ["先在三區試辦可控制執行範圍。", "每月公開支出與接種人次有助於預算透明。"],
+        "concerns": ["計畫尚未說明新增人力來源。"],
+        "personaRecommendations": ["執行前提出衛生所人力與排班配套。"],
+        "systemSuggestions": ["系統層面應把未說明的人力來源視為計畫缺口，而不是已解決的執行條件。"],
+        "sourceMappings": [
+          {"sourceId": "source-policy-001", "excerpt": "第一階段先在三個行政區試辦", "supports": "試辦範圍有限"},
+          {"sourceId": "source-policy-001", "excerpt": "計畫尚未說明新增人力來源", "supports": "人力配套仍不明確"}
+        ],
+        "assumptions": ["假設補助預算已獲得法定程序支持。"],
+        "uncertainties": ["沒有各衛生所目前人力與接種量資料。"],
+        "answers": [
+          {"question": "你會支持這項計畫嗎？需要哪些修改？", "answer": "有條件支持；需先補足人力與排班方案。"}
+        ],
+        "validationState": "valid"
+      },
+      "validationWarnings": [],
+      "providerUsage": {"inputTokens": 420, "outputTokens": 180}
+    }
+  ]
+}

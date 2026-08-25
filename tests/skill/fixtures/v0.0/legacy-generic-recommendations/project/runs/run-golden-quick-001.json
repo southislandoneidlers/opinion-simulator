@@ -1,0 +1,184 @@
+{
+  "completedAt": "2026-08-23T01:12:00Z",
+  "createdAt": "2026-08-23T01:10:00Z",
+  "executionPlan": {
+    "endpointClass": "local-test-fixture",
+    "estimate": {
+      "approximateInputTokensPerRequest": 451,
+      "inputCharactersPerRequest": 1804,
+      "method": "character-count-divided-by-four; non-billing heuristic",
+      "requestCount": 1
+    },
+    "model": "fixture-agent-model",
+    "personaRefs": [
+      {
+        "contentHash": "127c8d171825a36e34d55bd36dba9b79abbc0bc429256667546b85b7a67f62af",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      }
+    ],
+    "planHash": "d155d168997f0fdd08bbb77e09240d5bb619ea4e0d0d5b0cdcbedaac4e227411",
+    "preflightApproval": {
+      "acknowledgedDisclaimer": true,
+      "approvedAt": "2026-08-23T01:10:30Z",
+      "planHash": "d155d168997f0fdd08bbb77e09240d5bb619ea4e0d0d5b0cdcbedaac4e227411",
+      "realPersonReconfirmed": false,
+      "runId": "run-golden-quick-001",
+      "schemaVersion": "0.0"
+    },
+    "promptTemplate": {
+      "contentHash": "c3002ad9b6cedf23c28a68d9ca939883cdd328a347ea9bf6bcd7adeea96f881d",
+      "id": "default-persona-simulation",
+      "version": 1
+    },
+    "provider": "agent-host",
+    "questionSet": {
+      "id": "questions-policy-001",
+      "questions": [
+        "你會支持這項計畫嗎？需要哪些修改？"
+      ],
+      "responseInstructions": "請區分支持理由、風險與具體修改建議。",
+      "title": "試辦計畫評估"
+    },
+    "renderedPromptSections": {
+      "modelAndSampling": "{\n  \"model\": \"fixture-agent-model\",\n  \"provider\": \"agent-host\",\n  \"sampleCount\": 1,\n  \"settings\": {\n    \"maxOutputTokens\": null,\n    \"seed\": null,\n    \"temperature\": null\n  },\n  \"truncation\": {\n    \"applied\": false,\n    \"strategy\": \"none\"\n  }\n}",
+      "outputSchema": "{\n  \"answers\": [\n    {\n      \"answer\": \"string\",\n      \"question\": \"exact user question\"\n    }\n  ],\n  \"assumptions\": [\n    \"string\"\n  ],\n  \"concerns\": [\n    \"string\"\n  ],\n  \"position\": \"string\",\n  \"reasons\": [\n    \"string\"\n  ],\n  \"recommendations\": [\n    \"string\"\n  ],\n  \"sourceMappings\": [\n    {\n      \"excerpt\": \"exact text\",\n      \"sourceId\": \"source-policy-001\",\n      \"supports\": \"claim\"\n    }\n  ],\n  \"uncertainties\": [\n    \"string\"\n  ],\n  \"validationState\": \"valid | partial | invalid\"\n}",
+      "persona": "{\n  \"acceptedInferences\": [],\n  \"fields\": {\n    \"concerns\": \"在意預算透明與第一線人力負擔\",\n    \"goalsAndInterests\": \"希望政策能提高成人疫苗接種率\",\n    \"responseStyle\": \"務實、簡潔\",\n    \"roleAndContext\": \"某市衛生局的政策分析師\"\n  },\n  \"label\": \"地方衛生政策分析師\",\n  \"notProvidedFields\": [\n    \"constraintsAndResources\",\n    \"knowledgeAndExperience\",\n    \"valuesAndDecisionStyle\",\n    \"notes\"\n  ],\n  \"personaVersionId\": \"persona-version-policy-analyst-v1\"\n}",
+      "questions": "1. 你會支持這項計畫嗎？需要哪些修改？\n\nResponse instructions: 請區分支持理由、風險與具體修改建議。",
+      "sourceMaterial": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
+      "systemAndTaskRules": "Predict a possible response conditioned only on the confirmed Persona and supplied Source.\nDo not add missing Persona facts or present the output as a real quotation.\nSeparate source-supported observations from assumptions and uncertainty.\nReturn the requested structured Result. Preserve the user's question language.\nAI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks."
+    },
+    "sampleCount": 1,
+    "sampleIds": [
+      "run-golden-quick-001-sample-001"
+    ],
+    "settings": {
+      "maxOutputTokens": null,
+      "seed": null,
+      "temperature": null
+    },
+    "sourceRefs": [
+      {
+        "sha256": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7",
+        "sourceId": "source-policy-001"
+      }
+    ],
+    "truncation": {
+      "applied": false,
+      "strategy": "none"
+    }
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "personaContentHashes": {
+      "persona-version-policy-analyst-v1": "127c8d171825a36e34d55bd36dba9b79abbc0bc429256667546b85b7a67f62af"
+    },
+    "planHash": "d155d168997f0fdd08bbb77e09240d5bb619ea4e0d0d5b0cdcbedaac4e227411",
+    "sourceHashes": {
+      "source-policy-001": "b994b0231c0583b60f167c0a750614fb8f19e6c06ba7c82d9644c319bc4d08c7"
+    },
+    "templateContentHash": "c3002ad9b6cedf23c28a68d9ca939883cdd328a347ea9bf6bcd7adeea96f881d"
+  },
+  "kind": "persona-simulation",
+  "projectId": "project-golden-quick-001",
+  "report": {
+    "createdAt": "2026-08-23T01:12:00Z",
+    "disclaimer": "AI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks.",
+    "generationMethod": "deterministic-v0.0",
+    "path": "reports/report-golden-quick-001.md",
+    "reportId": "report-golden-quick-001"
+  },
+  "runId": "run-golden-quick-001",
+  "samples": [
+    {
+      "attemptEvents": [
+        {
+          "attempt": 1,
+          "error": null,
+          "status": "completed",
+          "timestamp": "2026-08-23T01:11:02Z"
+        }
+      ],
+      "completedAt": "2026-08-23T01:11:02Z",
+      "latencyMs": 2000,
+      "normalizedRequest": {
+        "model": "fixture-agent-model",
+        "planHash": "d155d168997f0fdd08bbb77e09240d5bb619ea4e0d0d5b0cdcbedaac4e227411",
+        "provider": "agent-host",
+        "runId": "run-golden-quick-001",
+        "sampleId": "run-golden-quick-001-sample-001"
+      },
+      "normalizedResponse": {
+        "model": "fixture-agent-model",
+        "provider": "agent-host",
+        "responseFormat": "structured-json",
+        "validationState": "valid"
+      },
+      "parsedResult": {
+        "answers": [
+          {
+            "answer": "有條件支持；需先補足人力與排班方案。",
+            "question": "你會支持這項計畫嗎？需要哪些修改？"
+          }
+        ],
+        "assumptions": [
+          "假設補助預算已獲得法定程序支持。"
+        ],
+        "concerns": [
+          "計畫尚未說明新增人力來源。"
+        ],
+        "position": "有條件支持三區試辦。",
+        "reasons": [
+          "先在三區試辦可控制執行範圍。",
+          "每月公開支出與接種人次有助於預算透明。"
+        ],
+        "recommendations": [
+          "執行前提出衛生所人力與排班配套。"
+        ],
+        "sourceMappings": [
+          {
+            "excerpt": "第一階段先在三個行政區試辦",
+            "sourceId": "source-policy-001",
+            "supports": "試辦範圍有限"
+          },
+          {
+            "excerpt": "計畫尚未說明新增人力來源",
+            "sourceId": "source-policy-001",
+            "supports": "人力配套仍不明確"
+          }
+        ],
+        "uncertainties": [
+          "沒有各衛生所目前人力與接種量資料。"
+        ],
+        "validationState": "valid"
+      },
+      "personaRef": {
+        "contentHash": "127c8d171825a36e34d55bd36dba9b79abbc0bc429256667546b85b7a67f62af",
+        "personaId": "persona-policy-analyst",
+        "personaVersionId": "persona-version-policy-analyst-v1",
+        "version": 1
+      },
+      "providerUsage": {
+        "inputTokens": 420,
+        "outputTokens": 180
+      },
+      "rawProviderResponse": {
+        "text": "我原則支持試辦，但應先交代新增人力與公開支出的做法。"
+      },
+      "sampleId": "run-golden-quick-001-sample-001",
+      "startedAt": "2026-08-23T01:11:00Z",
+      "status": "completed",
+      "validationWarnings": []
+    }
+  ],
+  "schemaVersion": "0.0",
+  "skillVersion": "0.0.0",
+  "stabilityComparison": {
+    "mode": "not-applicable",
+    "reason": "One-Sample quick mode does not produce a Stability Comparison."
+  },
+  "startedAt": "2026-08-23T01:11:00Z",
+  "status": "completed",
+  "synthesisAttribution": null
+}

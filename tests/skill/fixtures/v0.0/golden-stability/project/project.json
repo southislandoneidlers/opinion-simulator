@@ -1,0 +1,43 @@
+{
+  "compatibility": {
+    "minimumReaderVersion": "0.0",
+    "writer": "opinion-simulator-skill",
+    "writerVersion": "0.0.0"
+  },
+  "createdAt": "2026-08-23T02:00:00Z",
+  "currentPersonaVersionIds": [
+    "persona-version-policy-analyst-v1"
+  ],
+  "description": "Synthetic stability-mode fixture",
+  "locale": "zh-TW",
+  "projectId": "project-golden-stability-001",
+  "promptTemplateVersions": [
+    {
+      "contentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638",
+      "id": "default-persona-simulation",
+      "version": 1
+    }
+  ],
+  "questionSets": [
+    {
+      "id": "questions-policy-001",
+      "questions": [
+        "你會支持這項計畫嗎？需要哪些修改？"
+      ],
+      "responseInstructions": "請區分支持理由、風險與具體修改建議。",
+      "title": "試辦計畫評估"
+    }
+  ],
+  "reportIds": [
+    "report-golden-stability-001"
+  ],
+  "runIds": [
+    "run-golden-stability-001"
+  ],
+  "schemaVersion": "0.0",
+  "sourceIds": [
+    "source-policy-001"
+  ],
+  "title": "成人疫苗推廣穩定性模擬",
+  "updatedAt": "2026-08-23T02:14:00Z"
+}

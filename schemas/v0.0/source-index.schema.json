@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opinion-simulator.local/schemas/v0.0/source-index.schema.json",
+  "title": "Opinion Simulator Source Index",
+  "type": "object",
+  "required": ["schemaVersion", "sources"],
+  "properties": {
+    "schemaVersion": {"const": "0.0"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sourceId", "filename", "mediaType", "provenance", "extraction", "warnings", "textSha256", "originalCopied"],
+        "properties": {
+          "sourceId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+          "filename": {"type": "string", "minLength": 1},
+          "mediaType": {"const": "text/plain"},
+          "provenance": {
+            "type": "object",
+            "required": ["kind", "recordedAt"],
+            "properties": {
+              "kind": {"const": "pasted-text"},
+              "recordedAt": {"type": "string", "format": "date-time"}
+            },
+            "additionalProperties": false
+          },
+          "extraction": {
+            "type": "object",
+            "required": ["method", "version", "lineEndings"],
+            "properties": {
+              "method": {"const": "pasted-text"},
+              "version": {"const": "0.0"},
+              "lineEndings": {"const": "LF"}
+            },
+            "additionalProperties": false
+          },
+          "warnings": {"type": "array", "items": {"type": "string"}},
+          "textSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "originalCopied": {"const": false}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

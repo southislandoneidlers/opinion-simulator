@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.0",
+  "sources": [
+    {
+      "extraction": {
+        "lineEndings": "LF",
+        "method": "pasted-text",
+        "version": "0.0"
+      },
+      "filename": "pasted-digital-ai-leadership-guideline-2.0.txt",
+      "mediaType": "text/plain",
+      "originalCopied": false,
+      "provenance": {
+        "kind": "pasted-text",
+        "recordedAt": "2026-08-24T01:37:24Z"
+      },
+      "sourceId": "source-guideline-20260824-001",
+      "textSha256": "5251db59cd48c2fb19f8cd8d040147f1b7e741f72adc98ae2aa6224a9d602501",
+      "warnings": []
+    }
+  ]
+}
