@@ -10,6 +10,7 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-08-24 | Desktop white-screen fix | Complete | [2026-08-24-desktop-white-screen-fix.md](2026-08-24-desktop-white-screen-fix.md) |
 | 2026-08-24 | Incident: mass deletion and recovery | Complete | [2026-08-24-incident-mass-deletion-and-recovery.md](2026-08-24-incident-mass-deletion-and-recovery.md) |
 | 2026-08-24 | Desktop UX corrections after first GUI run | Complete (restored) | [2026-08-24-desktop-ux-corrections.md](2026-08-24-desktop-ux-corrections.md) |
 | 2026-08-24 | v0.1 desktop tracer scaffold | Complete (restored) | [2026-08-24-v0.1-desktop-tracer.md](2026-08-24-v0.1-desktop-tracer.md) |
