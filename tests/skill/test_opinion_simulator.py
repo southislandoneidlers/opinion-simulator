@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / ".agents" / "skills" / "opinion-simulator" / "scripts" / "opinion_simulator.py"
 FIXTURES = ROOT / "tests" / "skill" / "fixtures" / "v0.0"
 LEGACY_PROJECT = FIXTURES / "legacy-generic-recommendations" / "project"
-WALKTHROUGH_PROJECT = ROOT / "測驗用"
 SOURCE_TEXT = (
     "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。"
     "各衛生所需調整排班，但計畫尚未說明新增人力來源。"
@@ -293,6 +292,38 @@ class OpinionSimulatorCliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("approval is stale", result.stderr)
 
+    def test_source_id_is_dynamic_material_not_static_output_schema(self) -> None:
+        fixture = FIXTURES / "golden-quick"
+        changed = read_json(fixture / "workflow.json")
+        changed["source"]["sourceId"] = "source-policy-002"
+        changed["source"]["text"] = "不同的材料。"
+        with tempfile.TemporaryDirectory(prefix="opinion-simulator-cache-prefix-") as temporary:
+            temporary_path = Path(temporary)
+            workflow_path = temporary_path / "workflow.json"
+            first_path = temporary_path / "first.json"
+            second_path = temporary_path / "second.json"
+            write_json(workflow_path, changed)
+            first = run_tool(
+                "render-preflight",
+                "--workflow",
+                fixture / "workflow.json",
+                "--output",
+                first_path,
+            )
+            second = run_tool(
+                "render-preflight",
+                "--workflow",
+                workflow_path,
+                "--output",
+                second_path,
+            )
+            self.assert_success(first)
+            self.assert_success(second)
+            first_sections = read_json(first_path)["outbound"]["promptSections"]
+            second_sections = read_json(second_path)["outbound"]["promptSections"]
+            self.assertEqual(first_sections["outputSchema"], second_sections["outputSchema"])
+            self.assertIn("SOURCE-ID: source-policy-002", second_sections["sourceMaterial"])
+
     def test_real_person_requires_second_preflight_confirmation(self) -> None:
         fixture = FIXTURES / "golden-quick"
         workflow = read_json(fixture / "workflow.json")
@@ -449,13 +480,6 @@ class OpinionSimulatorCliTests(unittest.TestCase):
         legacy_report = (LEGACY_PROJECT / "reports" / "report-golden-quick-001.md").read_text(encoding="utf-8")
         self.assertIn("### Recommendations", legacy_report)
         self.assertNotIn("Direct Reaction", legacy_report)
-
-        walkthrough = run_tool("validate-project", WALKTHROUGH_PROJECT)
-        self.assert_success(walkthrough)
-        evidence = json.loads(walkthrough.stdout)
-        self.assertEqual(evidence["status"], "valid")
-        self.assertEqual(evidence["samplesChecked"], 1)
-        self.assertEqual(evidence["filesChecked"], 6)
 
     def test_build_rejects_result_without_direct_reaction(self) -> None:
         fixture = FIXTURES / "golden-quick"

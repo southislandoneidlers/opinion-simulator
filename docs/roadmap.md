@@ -47,16 +47,18 @@ Exit criteria:
 
 Current evidence covers deterministic schemas, hashes, Preflight invalidation,
 1/3-Sample golden Projects, Result/source validation, exact-text Stability
-Comparison, reports, negative safety cases, and four real agent-host Projects:
-`測驗用` (walkthrough 1), `測驗用-複驗` (same-expert rerun, uncounted),
-`測驗用-專家2`, and `測驗用-專家3` (proxied independent experts 2 and 3).
+Comparison, reports, negative safety cases, and four real agent-host Projects
+in [`../examples/walkthroughs/`](../examples/walkthroughs/):
+`agent-host-first` (walkthrough 1), `agent-host-rerun` (same-expert rerun,
+uncounted), `expert-2`, and `expert-3` (proxied independent experts 2 and 3).
 Counted expert walkthroughs are 3 of 3–5, the lower bound. Ratings for Direct
 Reaction, provenance, full-Source opening, and Method-limits-by-reference were
 useful across the counted set. Proxy mediation, hidden generative structuring,
 stability-mode usefulness, and independent Sample contexts remain limits.
 
-The selected-Result Synthesis CLI tracer produced `測驗用-綜整`; the user
-accepted that report before v0.1 work began.
+The selected-Result Synthesis CLI tracer produced
+[`selected-result-synthesis`](../examples/walkthroughs/selected-result-synthesis/);
+the user accepted that report before v0.1 work began.
 
 ### Recovery note (2026-08-24)
 
@@ -90,10 +92,10 @@ opt-in live flow without credential or Project corruption.
 
 ## v0.2 — Secure multi-provider foundation
 
-Status: planning approved by the user on 2026-08-24. Three user-requested
-items were pulled into this milestone: prompt-section reordering for token
-savings, a reusable Persona library, and non-empty Project directories
-(append Runs into one folder).
+Status: increments 1–7 implemented in the working tree (Keychain, OpenAI,
+prompt-section reordering, Persona library, non-empty Project append,
+persistent queue, IPC hardening). Remaining v0.2 scope still listed below
+(finalized open format/migrations) is not part of this tracer pass.
 
 Scope:
 
@@ -114,16 +116,94 @@ only missing Jobs; Gemini/OpenAI contract suites pass without live CI calls.
 
 ## v0.3 — Material and Persona workflow
 
+Status: in progress. The core Workbook validator and Desktop choose/validate
+IPC are implemented; last-Project memory, Settings, and multi-Persona
+execution remain pending.
+
+### 中文現況（給人類閱讀）
+
+v0.3 的檢查員已接到桌面程式：使用者可以選擇固定格式的 Excel，由主程序讀檔並
+顯示檢查結果或錯誤碼。這仍不是完整的「匯入功能」：檢查通過不會建立 Project、
+不會呼叫模型，也不能把 1–30 位 Persona 送進 Preflight 與 queue。上次開啟的
+專案路徑記憶與統一 Settings 也尚未做。這些是下一階段的工作，且仍必須保留既有
+的憑證與人工核准安全門檻。
+
+Entry gate satisfied on 2026-08-30: the user reviewed the five-sheet
+fixed-format Workbook and accepted it as the v0.3 usability baseline. The
+importer public contract was revised on 2026-08-31 in
+[Workbook input format](formats/workbook-input.md) after user review
+(`validateWorkbook` in core; 1–30 Personas per batch). Desktop Main can
+choose and validate a Workbook; it does not yet import into a draft, remember
+the last Project, or run a multi-Persona batch. Existing open-directory
+Projects must not be rewritten.
+
+Goal: remove repeated setup on every launch and scale the existing
+one-Source/one-Question-Set workflow from one Persona to 1–30 Personas
+without weakening credential or Preflight controls.
+
 Scope:
 
+- read and independently validate the accepted five-sheet Workbook as the
+  public editable input/management surface while immutable Run artifacts stay
+  in a companion open-directory Project;
+- remember the last successfully opened valid Project directory in app-data
+  together with its Workbook path and attempt to reopen them on the next
+  launch;
+- if the remembered Project is missing, moved, or invalid, show a recoverable
+  notice and directory chooser without creating, deleting, or overwriting
+  anything;
+- add one dedicated Settings stage for all provider credentials; remove the
+  duplicate editable API-key forms from Overview and Execution, leaving only
+  read-only status plus a link to Settings where useful;
+- after a credential-store write succeeds, show an explicit "已安全儲存"
+  acknowledgement. This confirms storage only, not that the provider has
+  accepted the key;
+- identify the currently selected provider credential without revealing it:
+  show provider, storage source, an optional user-defined label, and a short
+  one-way fingerprint calculated in Main. Never show the raw key, a copyable
+  suffix, or a reveal control;
 - PDF, DOCX, TXT, and Markdown extraction/preview;
 - optional original-file inclusion;
 - guarded AI Persona organization;
 - Persona versions;
+- select 1–30 confirmed Persona Versions for the same Source and
+  Question Set;
+- render one batch Preflight that lists every selected Persona and the total
+  planned request count plus the explicitly non-billing token estimate before
+  approval; the approval is bound to the exact matrix plan hash;
+- execute and persist each Persona as an independently traceable Run/Job so a
+  failed Persona can be retried without repeating completed Personas;
+- group Results by Persona. Cross-Persona Synthesis remains an explicit,
+  user-selected v0.4 action rather than an automatic group quotation;
 - multi-Sample stability comparison.
 
-Exit criteria: extraction fixtures, Persona inference controls, and repeated-run
-trace tests pass across supported platforms.
+Ordered tracer increments:
+
+1. fixed-format Workbook validator/importer plus last-Project memory and safe
+   startup recovery;
+2. unified Settings plus credential save acknowledgement and safe identity;
+3. file extraction and preview;
+4. structured Persona/version workflow plus multi-Persona batch Preflight and
+   queueing;
+5. per-Persona multi-Sample stability comparison and grouped Results.
+
+Exit criteria:
+
+- valid Workbook fixtures map deterministically into 1–30 Persona batch
+  drafts; 31 Personas, malformed, macro-enabled, oversized, credential-shaped,
+  or formula-bearing user-input cells and external-link-dependent inputs fail
+  safely without mutating a Project;
+- restarting the App reopens the last valid Project, while a stale remembered
+  path fails safely and remains user-recoverable;
+- one credential editing surface exists, a successful secure-store write is
+  acknowledged, and the displayed credential identity contains no recoverable
+  key material in Renderer state, IPC, logs, or Project artifacts;
+- a user can select at least two confirmed Personas, ask the same multiple
+  questions about one Source, approve the exact complete request matrix, and
+  receive separately traceable Results for each Persona;
+- partial failure/retry never repeats completed Persona Runs;
+- extraction fixtures, Persona inference controls, and repeated-run trace
+  tests pass across supported platforms.
 
 ## v0.4 — Review, synthesis, and complete exports
 

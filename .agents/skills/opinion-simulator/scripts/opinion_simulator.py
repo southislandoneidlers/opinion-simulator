@@ -28,9 +28,31 @@ DISCLAIMER = (
 # The default prompt-template definition was lost with the original script.
 # Its published v0.0 content hash is preserved verbatim so existing Projects
 # remain interpretable; see docs/handoffs for the reconstruction note.
+# Version 2 (2026-08-24): repeated/static sections are assembled first
+# (system rules, output schema, model/sampling) and per-Run content last
+# (Persona, questions, Source). Old version-1 Projects remain readable and
+# their stored plan hashes untouched.
 TEMPLATE_ID = "default-persona-simulation"
-TEMPLATE_VERSION = 1
+TEMPLATE_VERSION = 2
 TEMPLATE_CONTENT_HASH = "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638"
+
+# Canonical sent-prompt section order, shared with the desktop providers
+# (packages/core assemblePrompt). Keys refer to renderedPromptSections.
+PROMPT_SECTION_ORDER = (
+    "systemAndTaskRules",
+    "outputSchema",
+    "modelAndSampling",
+    "persona",
+    "questions",
+    "sourceMaterial",
+)
+
+
+def build_prompt(sections: dict) -> str:
+    missing = [key for key in PROMPT_SECTION_ORDER if not sections.get(key)]
+    if missing:
+        raise fail(f"prompt sections missing: {', '.join(missing)}")
+    return "\n\n".join(sections[key] for key in PROMPT_SECTION_ORDER)
 
 SYSTEM_AND_TASK_RULES = "\n".join(
     [
@@ -99,7 +121,7 @@ def fail(message: str) -> "ToolError":
 # Prompt rendering
 # ---------------------------------------------------------------------------
 
-def output_schema_section(source_id: str) -> str:
+def output_schema_section() -> str:
     schema_text = {
         "answers": [{"answer": "string", "question": "exact user question"}],
         "assumptions": ["string"],
@@ -109,7 +131,11 @@ def output_schema_section(source_id: str) -> str:
         "position": "string",
         "reasons": ["string"],
         "sourceMappings": [
-            {"excerpt": "exact text", "sourceId": source_id, "supports": "claim"}
+            {
+                "excerpt": "exact text from SOURCE MATERIAL",
+                "sourceId": "sourceId from SOURCE MATERIAL",
+                "supports": "claim",
+            }
         ],
         "systemSuggestions": ["string"],
         "uncertainties": ["string"],
@@ -146,7 +172,6 @@ def model_sampling_section(workflow: dict) -> str:
         "model": execution["model"],
         "sampleCount": execution["sampleCount"],
         "settings": execution["settings"],
-        "truncation": execution["truncation"],
     }
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2)
 
@@ -155,9 +180,12 @@ def render_prompt_sections(workflow: dict) -> dict:
     sections = {
         "systemAndTaskRules": SYSTEM_AND_TASK_RULES,
         "persona": persona_prompt_section(workflow["persona"]),
-        "sourceMaterial": workflow["source"]["text"],
+        "sourceMaterial": (
+            f"SOURCE-ID: {workflow['source']['sourceId']}\n"
+            f"SOURCE-TEXT:\n{workflow['source']['text']}"
+        ),
         "questions": questions_section(workflow["questionSet"]),
-        "outputSchema": output_schema_section(workflow["source"]["sourceId"]),
+        "outputSchema": output_schema_section(),
         "modelAndSampling": model_sampling_section(workflow),
     }
     return {key: sections[key] for key in sorted(sections)}

@@ -1,27 +1,31 @@
 import type { ExecutionPlan, StructuredResult } from "@opinion-simulator/core";
-import { isStructuredResult } from "@opinion-simulator/core";
+import { assemblePrompt, isStructuredResult } from "@opinion-simulator/core";
 
-export function geminiCredentialAvailable(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
+/**
+ * v0.2 increment 1: the API key is passed in explicitly by the desktop main
+ * process. This package has no credential fallback and never reads process.env.
+ */
+export function geminiCredentialAvailable(apiKey?: string | null): boolean {
+  return Boolean(apiKey && apiKey.trim());
 }
 
-export async function liveGeminiGenerate(plan: ExecutionPlan): Promise<{
+export async function liveGeminiGenerate(
+  plan: ExecutionPlan,
+  options?: { apiKey?: string | null }
+): Promise<{
   result: StructuredResult;
   rawResponse: unknown;
 }> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = options?.apiKey?.trim();
   if (!apiKey) {
     throw new Error("Gemini credential is not available in the main process");
   }
-  const sections = plan.renderedPromptSections;
-  const prompt = [
-    sections.systemAndTaskRules,
-    sections.persona,
-    sections.sourceMaterial,
-    sections.questions,
-    sections.outputSchema,
-    sections.modelAndSampling
-  ].join("\n\n");
+  if (plan.provider !== "gemini") {
+    throw new Error(`ExecutionPlan provider is ${plan.provider}, not gemini`);
+  }
+  // Static/repeated sections first, per-Run content last — one canonical
+  // ordering contract shared with the OpenAI path and the Python Skill.
+  const prompt = assemblePrompt(plan);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(plan.model)}:generateContent`;
   const response = await fetch(url, {
     method: "POST",

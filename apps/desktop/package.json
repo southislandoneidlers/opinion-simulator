@@ -15,16 +15,18 @@
     "@opinion-simulator/core": "0.1.0",
     "@opinion-simulator/project-store": "0.1.0",
     "@opinion-simulator/providers-gemini": "0.1.0",
+    "@opinion-simulator/providers-openai": "0.1.0",
+    "keytar": "^7.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "electron": "^35.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^41.10.3",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.11"
   }
 }

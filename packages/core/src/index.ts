@@ -6,3 +6,4 @@ export * from "./plan";
 export * from "./result";
 export * from "./report";
 export * from "./ipc";
+export * from "./workbook";

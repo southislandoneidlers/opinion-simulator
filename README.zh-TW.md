@@ -10,8 +10,8 @@
 - v0.0 Skill Prototype：`.agents/skills/opinion-simulator/` 的 Python CLI 已於事故後
   以存活的 837 行公開測試與 golden fixtures 重建，23 項測試全數通過；golden 專案
   產物達逐位元組一致。
-- 五個真實走查專案 `測`測驗用`、`測驗用-複驗`、`測驗用-專家2`、`測驗用-專家3`、
-  `測驗用-綜整` 完整存活且重新驗證為 `valid`。計入的獨立專家走查為 3／3–5 下限。
+- 五個真實走查專案位於 [`examples/walkthroughs/`](examples/walkthroughs/)，完整存活且
+  重新驗證為 `valid`。計入的獨立專家走查為 3／3–5 下限。
 - v0.1 Electron desktop tracer（`apps/desktop`）原始碼已逐字或依契約重建；
   Persona 階段採單一背景輸入、問題支援多題、UI 統一繁中文案、IPC 錯誤會顯示在狀態列。
 - Live Gemini 為 opt-in，憑證只從主程序環境變數 `GEMINI_API_KEY` 讀取。
@@ -34,4 +34,5 @@ npm run start -w @opinion-simulator/desktop   # 啟動桌面 App
 python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py validate-project <專案>
 ```
 
-文件索引見 `docs/README.md`；任務交接紀錄見 `docs/handoffs/README.md`。
+文件索引見 `docs/README.md`；Project 範例配置見 `examples/README.md`；任務交接紀錄見
+`docs/handoffs/README.md`。

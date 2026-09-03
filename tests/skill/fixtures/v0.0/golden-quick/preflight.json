@@ -7,8 +7,8 @@
     "provider": "agent-host"
   },
   "estimate": {
-    "approximateInputTokensPerRequest": 529,
-    "inputCharactersPerRequest": 2113,
+    "approximateInputTokensPerRequest": 530,
+    "inputCharactersPerRequest": 2120,
     "method": "character-count-divided-by-four; non-billing heuristic",
     "requestCount": 1
   },
@@ -75,11 +75,11 @@
       "version": 1
     },
     "promptSections": {
-      "modelAndSampling": "{\n  \"model\": \"fixture-agent-model\",\n  \"provider\": \"agent-host\",\n  \"sampleCount\": 1,\n  \"settings\": {\n    \"maxOutputTokens\": null,\n    \"seed\": null,\n    \"temperature\": null\n  },\n  \"truncation\": {\n    \"applied\": false,\n    \"strategy\": \"none\"\n  }\n}",
-      "outputSchema": "{\n  \"answers\": [\n    {\n      \"answer\": \"string\",\n      \"question\": \"exact user question\"\n    }\n  ],\n  \"assumptions\": [\n    \"string\"\n  ],\n  \"concerns\": [\n    \"string\"\n  ],\n  \"directReaction\": \"natural-language Persona reaction\",\n  \"personaRecommendations\": [\n    \"string\"\n  ],\n  \"position\": \"string\",\n  \"reasons\": [\n    \"string\"\n  ],\n  \"sourceMappings\": [\n    {\n      \"excerpt\": \"exact text\",\n      \"sourceId\": \"source-policy-001\",\n      \"supports\": \"claim\"\n    }\n  ],\n  \"systemSuggestions\": [\n    \"string\"\n  ],\n  \"uncertainties\": [\n    \"string\"\n  ],\n  \"validationState\": \"valid | partial | invalid\"\n}",
+      "modelAndSampling": "{\n  \"model\": \"fixture-agent-model\",\n  \"provider\": \"agent-host\",\n  \"sampleCount\": 1,\n  \"settings\": {\n    \"maxOutputTokens\": null,\n    \"seed\": null,\n    \"temperature\": null\n  }\n}",
+      "outputSchema": "{\n  \"answers\": [\n    {\n      \"answer\": \"string\",\n      \"question\": \"exact user question\"\n    }\n  ],\n  \"assumptions\": [\n    \"string\"\n  ],\n  \"concerns\": [\n    \"string\"\n  ],\n  \"directReaction\": \"natural-language Persona reaction\",\n  \"personaRecommendations\": [\n    \"string\"\n  ],\n  \"position\": \"string\",\n  \"reasons\": [\n    \"string\"\n  ],\n  \"sourceMappings\": [\n    {\n      \"excerpt\": \"exact text from SOURCE MATERIAL\",\n      \"sourceId\": \"sourceId from SOURCE MATERIAL\",\n      \"supports\": \"claim\"\n    }\n  ],\n  \"systemSuggestions\": [\n    \"string\"\n  ],\n  \"uncertainties\": [\n    \"string\"\n  ],\n  \"validationState\": \"valid | partial | invalid\"\n}",
       "persona": "{\n  \"acceptedInferences\": [],\n  \"fields\": {\n    \"concerns\": \"在意預算透明與第一線人力負擔\",\n    \"goalsAndInterests\": \"希望政策能提高成人疫苗接種率\",\n    \"responseStyle\": \"務實、簡潔\",\n    \"roleAndContext\": \"某市衛生局的政策分析師\"\n  },\n  \"label\": \"地方衛生政策分析師\",\n  \"notProvidedFields\": [\n    \"constraintsAndResources\",\n    \"knowledgeAndExperience\",\n    \"valuesAndDecisionStyle\",\n    \"notes\"\n  ],\n  \"personaVersionId\": \"persona-version-policy-analyst-v1\"\n}",
       "questions": "1. 你會支持這項計畫嗎？需要哪些修改？\n\nResponse instructions: 請區分支持理由、風險與具體修改建議。",
-      "sourceMaterial": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
+      "sourceMaterial": "SOURCE-ID: source-policy-001\nSOURCE-TEXT:\n市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。",
       "systemAndTaskRules": "Predict a possible response conditioned only on the confirmed Persona and supplied Source.\nLead with a natural-language Direct Reaction in the confirmed Persona's voice.\nDo not add missing Persona facts or present the output as a real quotation.\nPut simulated Persona Recommendations and System Suggestions in separate fields; never merge them into one unlabeled list.\nSeparate source-supported observations from assumptions and uncertainty.\nReturn the requested structured Result. Preserve the user's question language.\nAI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks."
     },
     "source": {
@@ -89,7 +89,7 @@
       "text": "市府計畫明年提供成人疫苗接種補助。第一階段先在三個行政區試辦，並公開每月支出與接種人次。各衛生所需調整排班，但計畫尚未說明新增人力來源。"
     }
   },
-  "planHash": "f92ac5d8d6ca81134b75178a8a70c7fb697b234c8fcb876e0b39bff3804ad714",
+  "planHash": "4386f5d2165bc98b92e5b6fc9ba8913f3a39cb7506b4929b42e2f853abef3db3",
   "predictionDisclaimer": "AI simulation — not a real quote. AI 模擬——不是真實引言。 This output is a model-generated prediction conditioned on the supplied Persona and Source. It is not evidence of what any real person or group actually thinks.",
   "requiresRealPersonReconfirmation": false,
   "runId": "run-golden-quick-001",

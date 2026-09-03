@@ -13,6 +13,10 @@
   each question in order when valid.
 - **Preflight Review**: pre-execution disclosure of outbound material, prompt,
   provider/model, estimate, warnings, disclaimer; approved by plan hash.
+- **Simulation Batch** *(v0.3 planned)*: one Source and one Question Set applied
+  to 1–30 selected confirmed Persona Versions. It is orchestration, not a
+  combined Persona or group quotation; every Persona keeps an independent
+  Run/Job, Result, and trace. One enabled Persona is a batch of one.
 - **Sample**: one independent provider response for one Persona within a Run.
   Stability mode produces three.
 - **Direct Reaction**: natural-language Persona-voiced response; the primary output.

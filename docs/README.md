@@ -30,14 +30,26 @@ document for the question at hand instead of copying its content elsewhere.
 ## Open formats
 
 - [Project format](formats/project-format.md)
+- [Workbook input format](formats/workbook-input.md) — accepted v0.3 editable
+  input/management baseline; `validateWorkbook` is implemented in core for
+  the fixed multi-Persona (1–30) format; Desktop Main/IPC can choose and
+  validate a `.xlsx` file. Last-Project memory and execution wiring remain
+  pending.
+  中文說明：目前可在桌面程式選擇 Excel 並看到檢查結果，但還不會把內容寫入
+  專案，也不會送去 Preflight 或執行。
 - [Persona schema](formats/persona-schema.md)
+- [Persona library](formats/persona-library.md) — app-data reuse cache of confirmed Persona Versions
 - [Run record](formats/run-record.md)
 - Machine-readable v0.0 JSON Schemas live under [`../schemas/v0.0/`](../schemas/v0.0/)
   and survived intact; they remain authoritative over prose summaries.
 
 ## Context and operations
 
+- [Project examples](../examples/README.md) — preserved walkthrough evidence
+  and desktop-flow baselines; they are distinct from automated test fixtures.
 - [Agent handoffs](handoffs/README.md) — append-only task continuity.
+- [Workbook 中文閱讀導覽](handoffs/2026-09-01-v03-workbook-validator-human-guide-zh-TW.md)
+  — 給人類閱讀的目前成果、限制與下一步。
 
 ## Source-of-truth order
 

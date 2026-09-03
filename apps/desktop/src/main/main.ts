@@ -1,6 +1,8 @@
 import { app, BrowserWindow, session, shell } from "electron";
 import { join } from "node:path";
 import { registerIpc } from "./ipc";
+import { configureLibraryDirectory } from "./persona-library";
+import { configureQueueDirectory } from "./run-queue";
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -32,6 +34,9 @@ app.whenReady().then(() => {
     });
   });
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  // v0.2 increment 4–6: Persona library and Run queue live in Electron userData.
+  configureLibraryDirectory(app.getPath("userData"));
+  configureQueueDirectory(app.getPath("userData"));
   registerIpc();
   createWindow();
 });

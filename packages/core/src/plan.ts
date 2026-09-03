@@ -1,6 +1,40 @@
 import { DEFAULT_RULES, DISCLAIMER } from "./disclaimer";
-import { hashJson, sha256Bytes } from "./hash";
+import { hashJson, sha256Bytes, sortKeys } from "./hash";
 import type { PersonaVersion } from "./persona";
+
+/**
+ * v0.2 increment 3: version 2 assembles the sent prompt with repeated/static
+ * sections first (system rules, output schema, model/sampling) and per-Run
+ * content last (Persona, questions, Source) for token savings and cache
+ * friendliness. Version 1 interleaved per-Run content early; old Projects
+ * carrying version 1 remain readable and their stored plan hashes untouched.
+ */
+export const PROMPT_TEMPLATE_VERSION = 2;
+
+export type ProviderId = "gemini" | "openai";
+
+export type ProviderMetadata = {
+  label: string;
+  models: readonly string[];
+  defaultModel: string;
+  endpointClass: string;
+};
+
+/** One provider catalogue shared by the main process and the Renderer. */
+export const PROVIDER_METADATA: Record<ProviderId, ProviderMetadata> = {
+  gemini: {
+    label: "Google Gemini",
+    models: ["gemini-3.6-flash"],
+    defaultModel: "gemini-3.6-flash",
+    endpointClass: "google-generativelanguage"
+  },
+  openai: {
+    label: "OpenAI",
+    models: ["gpt-5.6-luna"],
+    defaultModel: "gpt-5.6-luna",
+    endpointClass: "openai-chat-completions"
+  }
+};
 
 export type QuestionSet = {
   id: string;
@@ -10,7 +44,7 @@ export type QuestionSet = {
 };
 
 export type ExecutionSettings = {
-  provider: "gemini";
+  provider: ProviderId;
   model: string;
   endpointClass: string;
   sampleCount: 1 | 3;
@@ -39,7 +73,7 @@ export type ExecutionPlan = {
   questionSet: QuestionSet;
   promptTemplate: { id: string; version: number; contentHash: string };
   renderedPromptSections: PromptSections;
-  provider: "gemini";
+  provider: ProviderId;
   model: string;
   endpointClass: string;
   settings: { temperature: number | null; maxOutputTokens: number | null; seed: number | null };
@@ -52,6 +86,15 @@ export type ExecutionPlan = {
     approximateInputTokensPerRequest: number;
     requestCount: number;
   };
+};
+
+export type PreflightApproval = {
+  schemaVersion: "0.0";
+  runId: string;
+  planHash: string;
+  approvedAt: string;
+  acknowledgedDisclaimer: true;
+  realPersonReconfirmed: boolean;
 };
 
 export const RESULT_SHAPE = {
@@ -75,29 +118,40 @@ export function renderPromptSections(
   questionSet: QuestionSet,
   settings: ExecutionSettings
 ): PromptSections {
-  const questions = questionSet.questions.map((question, index) => `${index + 1}. ${question}`).join("\n");
+  const questionList = questionSet.questions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n");
+  const questions = questionSet.responseInstructions
+    ? `${questionList}\n\nResponse instructions: ${questionSet.responseInstructions}`
+    : questionList;
   const schema = {
     ...RESULT_SHAPE,
-    sourceMappings: [{ sourceId, excerpt: "exact text", supports: "claim" }]
+    sourceMappings: [
+      {
+        sourceId: "sourceId from SOURCE MATERIAL",
+        excerpt: "exact text from SOURCE MATERIAL",
+        supports: "claim"
+      }
+    ]
   };
   return {
     systemAndTaskRules: DEFAULT_RULES,
     persona: JSON.stringify(
-      {
+      sortKeys({
         personaVersionId: persona.id,
         label: persona.label,
         fields: persona.fields,
         notProvidedFields: persona.notProvidedFields,
         acceptedInferences: persona.inferences.filter((item) => item.decision === "accepted")
-      },
+      }),
       null,
       2
     ),
-    sourceMaterial: sourceText,
+    sourceMaterial: `SOURCE-ID: ${sourceId}\nSOURCE-TEXT:\n${sourceText}`,
     questions,
-    outputSchema: JSON.stringify(schema, null, 2),
+    outputSchema: JSON.stringify(sortKeys(schema), null, 2),
     modelAndSampling: JSON.stringify(
-      {
+      sortKeys({
         provider: settings.provider,
         model: settings.model,
         sampleCount: settings.sampleCount,
@@ -106,7 +160,7 @@ export function renderPromptSections(
           maxOutputTokens: settings.maxOutputTokens,
           seed: settings.seed
         }
-      },
+      }),
       null,
       2
     )
@@ -149,7 +203,7 @@ export function makeExecutionPlan(input: {
     questionSet: input.questionSet,
     promptTemplate: {
       id: "default-persona-simulation",
-      version: 1,
+      version: PROMPT_TEMPLATE_VERSION,
       contentHash: sha256Bytes(DEFAULT_RULES)
     },
     renderedPromptSections: sections,
@@ -177,6 +231,69 @@ export function planHash(plan: ExecutionPlan): string {
   return hashJson(plan);
 }
 
+export function approvePreflight(input: {
+  plan: ExecutionPlan;
+  runId: string;
+  presentedPlanHash: string;
+  acknowledgedDisclaimer: boolean;
+  realPersonReconfirmed: boolean;
+  approvedAt: string;
+}): PreflightApproval {
+  if (!input.acknowledgedDisclaimer) {
+    throw new Error("Preflight 必須先承認預測聲明");
+  }
+  const currentPlanHash = planHash(input.plan);
+  if (input.presentedPlanHash !== currentPlanHash) {
+    throw new Error("Preflight 已過期；材料、Persona、問題或設定已變更，請重新檢視並承認目前計畫。");
+  }
+  return {
+    schemaVersion: "0.0",
+    runId: input.runId,
+    planHash: currentPlanHash,
+    approvedAt: input.approvedAt,
+    acknowledgedDisclaimer: true,
+    realPersonReconfirmed: input.realPersonReconfirmed
+  };
+}
+
+export function assertCurrentPreflightApproval(
+  plan: ExecutionPlan,
+  runId: string,
+  approval: PreflightApproval
+): void {
+  if (approval.runId !== runId || approval.planHash !== planHash(plan) || !approval.acknowledgedDisclaimer) {
+    throw new Error("Preflight 核准與目前執行計畫不相符；拒絕執行。");
+  }
+}
+
+/**
+ * Canonical assembly of the full prompt sent to providers. Static/repeated
+ * sections come first, per-Run content last. Both desktop providers and the
+ * Python Skill share this single contract.
+ */
+export function assemblePrompt(plan: ExecutionPlan): string {
+  const sections = plan.renderedPromptSections;
+  const order =
+    plan.promptTemplate.version === 1
+      ? [
+          sections.systemAndTaskRules,
+          sections.persona,
+          sections.sourceMaterial,
+          sections.questions,
+          sections.outputSchema,
+          sections.modelAndSampling
+        ]
+      : [
+          sections.systemAndTaskRules,
+          sections.outputSchema,
+          sections.modelAndSampling,
+          sections.persona,
+          sections.questions,
+          sections.sourceMaterial
+        ];
+  return order.join("\n\n");
+}
+
 export function preflightView(plan: ExecutionPlan, createdAt: string, runId: string) {
   return {
     schemaVersion: "0.0",
@@ -199,7 +316,7 @@ export function preflightView(plan: ExecutionPlan, createdAt: string, runId: str
     estimate: plan.estimate,
     truncation: plan.truncation,
     warnings: [
-      "v0.1 desktop tracer: Keychain storage is a later milestone. Live Gemini, if used, reads a process credential in the main process only.",
+      "憑證只存在作業系統鑰匙圈（或主程序環境變數 fallback），不會出現在介面或專案檔。Live 呼叫只在你於 Preflight 承認預測聲明後發生。",
       DISCLAIMER
     ],
     predictionDisclaimer: DISCLAIMER,

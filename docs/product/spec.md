@@ -16,8 +16,9 @@ trace stays in Run artifacts.
 
 - Persona fields need raw-input support or explicit per-inference acceptance;
   unsupported facts stay `not provided`.
-- Every external model call requires a current Preflight approval keyed by plan
-  hash; stale approvals are rejected.
+- Every external model call requires a current Preflight approval keyed by the
+  exact plan hash and Run id; stale approvals are rejected. The Desktop passes
+  that hash across its run IPC channel and freezes it into queued Jobs.
 - Quick mode uses exactly 1 Sample; stability mode uses 3 with an exact-text
   Stability Comparison that makes no numeric confidence claims.
 - Synthesis is user-selected and fully attributed (`supportingSampleIds`);
@@ -25,3 +26,34 @@ trace stays in Run artifacts.
 - Reports open with Supplied context then Direct Reaction; shared Method limits
   live in `methodology.md`; the prediction disclaimer stays visible.
 - Legacy Projects with generic `recommendations` remain valid.
+
+## Confirmed v0.3 usability decisions
+
+- The accepted five-sheet `.xlsx` Workbook is the public editable input and
+  management surface for Personas, Question Sets, Sources, and Simulation
+  Batches. The App reads and validates it directly; immutable Runs and reports
+  remain in a companion open-directory Project in the first v0.3 tracer. The
+  read-only `validateWorkbook` implementation and contract live in
+  [Workbook input format](../formats/workbook-input.md). Desktop Main can
+  choose a `.xlsx` file and return the validation result; draft import,
+  last-Project memory, and execution wiring remain pending.
+  The imported document is a 1–30 Persona batch, not a single-Persona draft.
+- The App remembers the last valid Project directory in app-data and attempts
+  to reopen it at startup. A missing or invalid path produces a recoverable
+  notice; it never causes implicit creation, deletion, or overwrite.
+- Provider credentials are edited in one dedicated Settings stage. Overview
+  and Execution may show read-only availability/status and a navigation link,
+  but must not duplicate the editable key form.
+- A successful Keychain/Credential Manager write gets an immediate
+  "已安全儲存" acknowledgement on the current settings card. Storage success
+  must not be described as API validity; provider acceptance is shown only
+  after a real provider request succeeds.
+- The active credential is distinguishable by provider, storage source, and a
+  short one-way fingerprint computed in Main. Optional user labels remain
+  pending. Raw key material, a copyable suffix, and reveal controls never
+  reach Renderer, Project files, logs, or reports.
+- A simulation batch selects 1–30 confirmed Persona Versions for one Source
+  and one multi-question Question Set. Preflight shows the complete Persona ×
+  Sample request matrix. Each Persona remains an independently attributable
+  Run/Job and Result; v0.3 does not automatically speak for the group or
+  perform cross-Persona Synthesis.

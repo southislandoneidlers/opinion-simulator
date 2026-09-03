@@ -6,14 +6,15 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @opinion-simulator/core && npm run build -w @opinion-simulator/project-store && npm run build -w @opinion-simulator/providers-gemini && npm run build -w @opinion-simulator/desktop",
+    "build": "npm run build -w @opinion-simulator/core && npm run build -w @opinion-simulator/project-store && npm run build -w @opinion-simulator/providers-gemini && npm run build -w @opinion-simulator/providers-openai && npm run build -w @opinion-simulator/desktop",
     "dev": "npm run dev -w @opinion-simulator/desktop",
-    "test": "npm run test -w @opinion-simulator/core && npm run test -w @opinion-simulator/project-store && npm run test -w @opinion-simulator/providers-gemini && npm run test -w @opinion-simulator/desktop && python3 -B -m unittest discover -s tests/skill -p 'test_*.py' -q",
-    "test:js": "npm run test -w @opinion-simulator/core && npm run test -w @opinion-simulator/project-store && npm run test -w @opinion-simulator/providers-gemini && npm run test -w @opinion-simulator/desktop"
+    "test": "npm run test:js && python3 -B -m unittest discover -s tests/skill -p 'test_*.py' -q",
+    "test:js": "npm run test -w @opinion-simulator/core && npm run test -w @opinion-simulator/project-store && npm run test -w @opinion-simulator/providers-gemini && npm run test -w @opinion-simulator/providers-openai && npm run test -w @opinion-simulator/desktop"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.8"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
   }
 }

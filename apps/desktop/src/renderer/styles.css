@@ -251,3 +251,71 @@ label.disclaimer-check {
   font-size: 14px;
   font-weight: 600;
 }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.credential-row {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.library-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 12px;
+}
+
+.library-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.workbook-report {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #eef0f3;
+}
+
+.workbook-issues code {
+  font-size: 12px;
+}
+
+.save-receipt {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: #e7f6ec;
+  border: 1px solid #8fbf9f;
+  border-radius: 6px;
+  color: #1e5b34;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.status-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.status-ok {
+  background: #e7f6ec;
+  border: 1px solid #8fbf9f;
+  color: #1e5b34;
+}
+
+.status-error {
+  background: #fdecea;
+  border: 1px solid #e5a09a;
+  color: #8a1f11;
+}

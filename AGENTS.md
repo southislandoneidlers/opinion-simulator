@@ -22,7 +22,9 @@
   Never place secrets in Project files, Renderer state, logs, or tests. The
   v0.1 opt-in exception is a main-process environment variable.
 - Do not perform destructive filesystem operations outside explicitly created
-  temporary directories. Writers must refuse non-empty output directories.
+  temporary directories. Writers never delete or overwrite existing content.
+  A non-empty directory that is not a valid Project is refused. A valid
+  Project may receive appended Runs with new ids; indexes update atomically.
 
 ## Ending a task
 
