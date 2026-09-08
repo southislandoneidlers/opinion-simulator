@@ -9,6 +9,12 @@ calls.
 
 ## Controls
 
+Planned v0.4 changes are defined in
+[v0.4 使用回饋改進規格](../product/v04-usability-improvements.md): isolate
+OpenRouter credentials and destination from legacy OpenAI, preserve exact-plan
+approval independently of disclaimer acknowledgement, and deduplicate submission
+intents in Main/queue. These controls are requirements, not current guarantees.
+
 - Credentials only in macOS Keychain / Windows Credential Manager; the v0.1
   opt-in exception (a main-process environment variable) remains as fallback.
   The desktop main process uses Keytar's native credential-store bridge
@@ -40,10 +46,9 @@ calls.
   refused. A valid Project may receive appended Runs; new artifacts get new
   ids, and `project.json` / checksums are updated in place via temp + rename.
 
-## Planned v0.3 credential identity UI
+## v0.3 credential identity UI
 
-Implemented on the current Overview/Execution settings card (a dedicated
-Settings stage is still pending):
+Implemented in the dedicated Settings stage:
 
 - Main derives a short one-way SHA-256 fingerprint (8 hex characters) from the
   resolved key and returns only that fingerprint, provider, storage source,
@@ -51,8 +56,8 @@ Settings stage is still pending):
 - Renderer never receives the raw key, a copyable key suffix, or a reveal
   capability. The identity metadata is not written to Project artifacts or
   logs.
-- "已安全儲存" means the OS credential-store write succeeded. It must not claim
-  that the provider accepted the key. A separate last-success status may be
-  recorded only after an actual provider request succeeds.
+- "已安全儲存" means the OS credential-store write succeeded. It does not claim
+  that the provider accepted the key. `verifiedByUse` becomes true only after
+  an actual request succeeds for the same one-way credential fingerprint.
 - Remembered Project paths and non-secret credential labels live in app-data;
   losing or corrupting that convenience state must not mutate a Project.

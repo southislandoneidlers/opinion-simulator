@@ -64,7 +64,8 @@ function makeJob(runId: string): RunJob {
         title: "使用者問題",
         questions: ["問題？"],
         responseInstructions: ""
-      }
+      },
+      sampleCount: 1
     }
   };
 }

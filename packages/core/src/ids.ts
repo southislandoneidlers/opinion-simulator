@@ -4,6 +4,8 @@ export function isId(value: string): boolean {
   return ID_RE.test(value);
 }
 
+let slugCounter = 0;
+
 export function slugId(prefix: string, raw: string): string {
   const slug = raw
     .normalize("NFKC")
@@ -11,7 +13,8 @@ export function slugId(prefix: string, raw: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
   const body = slug.length > 0 ? slug : "item";
-  const id = `${prefix}-${body}-${Date.now().toString(36)}`;
+  slugCounter = (slugCounter + 1) % 1000000;
+  const id = `${prefix}-${body}-${Date.now().toString(36)}-${slugCounter.toString(36)}`;
   if (!isId(id)) {
     throw new Error("generated identifier is invalid");
   }

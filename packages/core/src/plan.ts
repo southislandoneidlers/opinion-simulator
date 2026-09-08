@@ -323,3 +323,79 @@ export function preflightView(plan: ExecutionPlan, createdAt: string, runId: str
     requiresRealPersonReconfirmation: false
   };
 }
+
+export interface BatchPreflightInput {
+  batchId: string;
+  sourceId: string;
+  sourceTitle?: string;
+  questionCount: number;
+  sampleCount: number;
+  plans: Array<{
+    personaId: string;
+    label: string;
+    plan: ExecutionPlan;
+    runId: string;
+  }>;
+  provider: ProviderId;
+  model: string;
+  endpointClass: string;
+  createdAt: string;
+}
+
+export function computeBatchPlanHash(
+  batchId: string,
+  plans: Array<{ personaId: string; planHash: string }>
+): string {
+  const normalized = plans
+    .map((p) => ({ personaId: p.personaId, planHash: p.planHash }))
+    .sort((a, b) => a.personaId.localeCompare(b.personaId));
+  return sha256Bytes(JSON.stringify({ batchId, plans: normalized }));
+}
+
+export function batchPreflightView(input: BatchPreflightInput) {
+  const personaPlans = input.plans.map((p) => ({
+    personaId: p.personaId,
+    label: p.label,
+    planHash: planHash(p.plan),
+    runId: p.runId
+  }));
+  const bPlanHash = computeBatchPlanHash(input.batchId, personaPlans);
+  const totalRequests = input.plans.length * input.sampleCount;
+  const tokensPerSample = input.plans.reduce(
+    (sum, item) => sum + item.plan.estimate.approximateInputTokensPerRequest,
+    0
+  );
+  const tokenPerRequest = input.plans.length > 0 ? Math.ceil(tokensPerSample / input.plans.length) : 0;
+
+  return {
+    schemaVersion: "0.0",
+    batchId: input.batchId,
+    batchPlanHash: bPlanHash,
+    createdAt: input.createdAt,
+    approvalStatus: "pending",
+    source: { sourceId: input.sourceId, title: input.sourceTitle },
+    questionCount: input.questionCount,
+    sampleCount: input.sampleCount,
+    personas: personaPlans,
+    matrix: {
+      personaCount: input.plans.length,
+      questionCount: input.questionCount,
+      sampleCount: input.sampleCount,
+      totalRequests
+    },
+    estimate: {
+      approximateInputTokensPerRequest: tokenPerRequest,
+      approximateTotalInputTokens: tokensPerSample * input.sampleCount
+    },
+    destination: {
+      provider: input.provider,
+      model: input.model,
+      endpointClass: input.endpointClass
+    },
+    warnings: [
+      "憑證只存在作業系統鑰匙圈（或主程序環境變數 fallback），不會出現在介面或專案檔。Live 呼叫只在承認預測聲明後發生。",
+      DISCLAIMER
+    ],
+    predictionDisclaimer: DISCLAIMER
+  };
+}

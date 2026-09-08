@@ -13,6 +13,8 @@ document for the question at hand instead of copying its content elsewhere.
 - [Product specification](product/spec.md) — canonical behavior, user stories,
   scope, implementation and testing decisions. *(reconstructed summary)*
 - [Roadmap](roadmap.md) — ordered v0.0 through v2 delivery boundaries.
+- [v0.4 使用回饋改進規格](product/v04-usability-improvements.md) — 2026-09-07
+  五項已確認改進、實作順序與驗收條件；尚未實作。
 - [Workspace UX](ux/workspace.md) — freely navigable staged workflow and gates.
   *(partially reconstructed)*
 
@@ -31,12 +33,10 @@ document for the question at hand instead of copying its content elsewhere.
 
 - [Project format](formats/project-format.md)
 - [Workbook input format](formats/workbook-input.md) — accepted v0.3 editable
-  input/management baseline; `validateWorkbook` is implemented in core for
-  the fixed multi-Persona (1–30) format; Desktop Main/IPC can choose and
-  validate a `.xlsx` file. Last-Project memory and execution wiring remain
-  pending.
-  中文說明：目前可在桌面程式選擇 Excel 並看到檢查結果，但還不會把內容寫入
-  專案，也不會送去 Preflight 或執行。
+  input/management baseline. Desktop Main validates and imports the fixed
+  multi-Persona format into an in-memory draft; Workbook Personas retain their
+  ids and require explicit App confirmation before Preflight. Approved batches
+  execute as independent append-only Runs.
 - [Persona schema](formats/persona-schema.md)
 - [Persona library](formats/persona-library.md) — app-data reuse cache of confirmed Persona Versions
 - [Run record](formats/run-record.md)

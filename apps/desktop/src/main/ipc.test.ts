@@ -12,12 +12,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validateWorkbook } from "@opinion-simulator/core";
 import { createIpcHandlers, dispatchDesktopIpc } from "./ipc-handlers";
 import { configureLibraryDirectory } from "./persona-library";
 import { configureQueueDirectory } from "./run-queue";
-import { fingerprintKey, setCredentialStoreForTests } from "./credentials";
+import { configureLastProjectDirectory } from "./last-project";
+import {
+  fingerprintKey,
+  markProviderVerified,
+  resetProviderVerification,
+  setCredentialStoreForTests
+} from "./credentials";
 
 const FAKE_KEY = "FAKE-KEY-FOR-TESTS-do-not-use-real-keys";
 
@@ -31,8 +38,10 @@ describe("renderer secret-access over IPC", () => {
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
+    configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     delete process.env.GEMINI_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    resetProviderVerification();
     setCredentialStoreForTests({
       getPassword: async () => null,
       setPassword: async () => undefined,
@@ -40,7 +49,8 @@ describe("renderer secret-access over IPC", () => {
     });
     handlers = createIpcHandlers({
       chooseDirectory: async () => "/tmp",
-      chooseWorkbook: async () => null
+      chooseWorkbook: async () => null,
+      chooseMaterialFile: async () => null
     });
   });
 
@@ -71,8 +81,13 @@ describe("renderer secret-access over IPC", () => {
     const status = await dispatchDesktopIpc(handlers, "credential.status", {});
     expect(status).toEqual({
       providers: {
-        gemini: { available: true, source: "env", fingerprint: fingerprintKey(FAKE_KEY) },
-        openai: { available: false, source: null, fingerprint: null }
+        gemini: {
+          available: true,
+          source: "env",
+          fingerprint: fingerprintKey(FAKE_KEY),
+          verifiedByUse: false
+        },
+        openai: { available: false, source: null, fingerprint: null, verifiedByUse: false }
       },
       disclaimer: expect.any(String)
     });
@@ -101,6 +116,18 @@ describe("renderer secret-access over IPC", () => {
     expect(JSON.stringify(result)).not.toContain(FAKE_KEY);
   });
 
+  it("publishes verifiedByUse after a successful provider use without exposing the key", async () => {
+    process.env.GEMINI_API_KEY = FAKE_KEY;
+    markProviderVerified("gemini", FAKE_KEY);
+
+    const status = (await dispatchDesktopIpc(handlers, "credential.status", {})) as {
+      providers: { gemini: { verifiedByUse: boolean } };
+    };
+
+    expect(status.providers.gemini.verifiedByUse).toBe(true);
+    expect(JSON.stringify(status)).not.toContain(FAKE_KEY);
+  });
+
   it("does not expose a channel that loads the raw key", async () => {
     await expect(dispatchDesktopIpc(handlers, "credential.get", {})).rejects.toThrow(
       /Unknown IPC channel/
@@ -122,10 +149,12 @@ describe("workbook IPC", () => {
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
+    configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-workbook-"));
     handlers = createIpcHandlers({
       chooseDirectory: async () => "/tmp",
-      chooseWorkbook: async () => goldenPath
+      chooseWorkbook: async () => goldenPath,
+      chooseMaterialFile: async () => null
     });
   });
 
@@ -153,7 +182,8 @@ describe("workbook IPC", () => {
     await expect(dispatchDesktopIpc(handlers, "desktop.chooseWorkbook", {})).resolves.toBe(goldenPath);
     const canceled = createIpcHandlers({
       chooseDirectory: async () => "/tmp",
-      chooseWorkbook: async () => null
+      chooseWorkbook: async () => null,
+      chooseMaterialFile: async () => null
     });
     await expect(dispatchDesktopIpc(canceled, "desktop.chooseWorkbook", {})).resolves.toBeNull();
   });
@@ -222,5 +252,147 @@ describe("workbook IPC", () => {
     expect(readFileSync(join(projectDir, "marker.txt"), "utf8")).toBe("must remain unchanged\n");
     expect(readFileSync(workbookCopy)).toEqual(beforeBytes);
     expect(readdirSync(tempRoot).sort()).toEqual(["book.xlsx", "project"]);
+  });
+
+  it("remembers last opened project and supports startup inspection", async () => {
+    const initial = (await dispatchDesktopIpc(handlers, "project.getLastProject", {})) as {
+      status: string;
+      remembered: unknown;
+    };
+    expect(initial.status).toBe("none");
+
+    const projectDir = join(tempRoot, "my-project");
+    mkdirSync(projectDir);
+    await dispatchDesktopIpc(handlers, "project.create", {
+      projectDirectory: projectDir,
+      title: "My New Project"
+    });
+
+    const afterCreate = (await dispatchDesktopIpc(handlers, "project.getLastProject", {})) as {
+      status: string;
+      remembered: { projectDirectory: string };
+    };
+    expect(afterCreate.status).toBe("valid");
+    expect(afterCreate.remembered.projectDirectory).toBe(projectDir);
+  });
+
+  it("imports a validated Workbook into a project draft", async () => {
+    const projectDir = join(tempRoot, "import-project");
+    mkdirSync(projectDir);
+    await dispatchDesktopIpc(handlers, "project.create", {
+      projectDirectory: projectDir,
+      title: "Import Target"
+    });
+
+    const importResult = (await dispatchDesktopIpc(handlers, "workbook.importDraft", {
+      projectDirectory: projectDir,
+      path: goldenPath
+    })) as {
+      ok: boolean;
+      batchId: string;
+      personaCount: number;
+      questionCount: number;
+      sampleCount: number;
+      sourceText: string;
+      questions: string[];
+      personaRaw: string;
+      personas: Array<{ personaId: string }>;
+    };
+
+    expect(importResult.ok).toBe(true);
+    expect(importResult.batchId).toBe("batch-001");
+    expect(importResult.personaCount).toBe(2);
+    expect(importResult.sampleCount).toBe(1);
+    expect(importResult.sourceText.length).toBeGreaterThan(0);
+    expect(importResult.questions.length).toBeGreaterThan(0);
+    expect(importResult.personaRaw.length).toBeGreaterThan(0);
+    expect(importResult.personas.map((persona) => persona.personaId)).toEqual([
+      "persona-001",
+      "persona-002"
+    ]);
+
+    const libraryBeforeConfirmation = (await dispatchDesktopIpc(
+      handlers,
+      "persona.library.list",
+      {}
+    )) as { personas: unknown[] };
+    expect(libraryBeforeConfirmation.personas).toEqual([]);
+
+    await expect(
+      dispatchDesktopIpc(handlers, "preflight.render", { projectDirectory: projectDir })
+    ).rejects.toThrow(/確認.*Persona/);
+
+    await dispatchDesktopIpc(handlers, "project.confirmPersona", {
+      projectDirectory: projectDir
+    });
+
+    const reopened = (await dispatchDesktopIpc(handlers, "project.create", {
+      projectDirectory: projectDir,
+      title: "Should not wipe import"
+    })) as { sourceText: string; personaRaw: string };
+    expect(reopened.sourceText).toBe(importResult.sourceText);
+    expect(reopened.personaRaw).toBe(importResult.personaRaw);
+
+    const preflight = (await dispatchDesktopIpc(handlers, "preflight.render", {
+      projectDirectory: projectDir
+    })) as {
+      isBatch: boolean;
+      batchPlanHash: string;
+      personas: Array<{ personaId: string }>;
+      matrix: { personaCount: number; totalRequests: number };
+    };
+    expect(preflight.isBatch).toBe(true);
+    expect(preflight.batchPlanHash).toBeTruthy();
+    expect(preflight.personas.length).toBe(2);
+    expect(preflight.matrix.totalRequests).toBe(2);
+
+    const enqueueRes = (await dispatchDesktopIpc(handlers, "queue.enqueueBatch", {
+      projectDirectory: projectDir,
+      batchPlanHash: preflight.batchPlanHash,
+      acknowledgedDisclaimer: true,
+      mode: "mocked"
+    })) as {
+      ok: boolean;
+      queuedCount: number;
+      jobs: Array<{ status: string }>;
+      snapshot: { runIds: string[] } | null;
+    };
+    expect(enqueueRes.ok).toBe(true);
+    expect(enqueueRes.queuedCount).toBe(2);
+    expect(enqueueRes.jobs.every((job) => job.status === "completed")).toBe(true);
+    expect(enqueueRes.snapshot?.runIds).toHaveLength(2);
+  });
+
+  it("extracts material file over IPC", async () => {
+    const txtPath = join(tempRoot, "extracted.md");
+    writeFileSync(txtPath, "# 政策草案材料\n\n具體內容說明", "utf8");
+
+    const result = (await dispatchDesktopIpc(handlers, "material.extractFile", {
+      path: txtPath
+    })) as {
+      format: string;
+      text: string;
+      fileName: string;
+    };
+    expect(result.format).toBe("md");
+    expect(result.text).toContain("政策草案材料");
+    expect(result.fileName).toBe("extracted.md");
+  });
+
+  it("rejects a compressed PDF stream that expands beyond the material limit", async () => {
+    const pdfPath = join(tempRoot, "compressed-bomb.pdf");
+    const compressed = deflateSync(Buffer.alloc(8 * 1024 * 1024 + 1, 65));
+    writeFileSync(
+      pdfPath,
+      Buffer.concat([
+        Buffer.from("%PDF-1.4\n1 0 obj\n<< /Filter /FlateDecode >>\nstream\n", "binary"),
+        compressed,
+        Buffer.from("\nendstream\nendobj\n%%EOF", "binary")
+      ])
+    );
+
+    await expect(
+      dispatchDesktopIpc(handlers, "material.extractFile", { path: pdfPath })
+    ).rejects.toThrow(/解壓縮.*上限/);
   });
 });

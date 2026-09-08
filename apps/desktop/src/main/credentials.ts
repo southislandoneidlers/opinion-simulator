@@ -29,6 +29,20 @@ export const PROVIDER_ENV_KEYS: Record<ProviderId, string> = {
 
 export type CredentialSource = "keychain" | "env" | null;
 
+const verifiedCredentialFingerprints = new Map<ProviderId, string>();
+
+export function markProviderVerified(provider: ProviderId, credentialValue: string): void {
+  verifiedCredentialFingerprints.set(provider, fingerprintKey(credentialValue));
+}
+
+export function resetProviderVerification(provider?: ProviderId): void {
+  if (provider) {
+    verifiedCredentialFingerprints.delete(provider);
+  } else {
+    verifiedCredentialFingerprints.clear();
+  }
+}
+
 /** Short one-way identity for Renderer display. Never a key suffix. */
 export function fingerprintKey(value: string): string {
   return createHash("sha256").update(value.trim(), "utf8").digest("hex").slice(0, 8);
@@ -84,12 +98,18 @@ async function deletePassword(account: string): Promise<boolean> {
  */
 export async function resolveProviderCredential(
   provider: ProviderId
-): Promise<{ available: boolean; source: CredentialSource; fingerprint: string | null }> {
+): Promise<{ available: boolean; source: CredentialSource; fingerprint: string | null; verifiedByUse: boolean }> {
   if (supportsCredentialStore()) {
     try {
       const storedKey = await findPassword(PROVIDER_ACCOUNTS[provider]);
       if (storedKey) {
-        return { available: true, source: "keychain", fingerprint: fingerprintKey(storedKey) };
+        return {
+          available: true,
+          source: "keychain",
+          fingerprint: fingerprintKey(storedKey),
+          verifiedByUse:
+            verifiedCredentialFingerprints.get(provider) === fingerprintKey(storedKey)
+        };
       }
     } catch {
       // A broken credential-store interaction falls through to the documented
@@ -98,8 +118,13 @@ export async function resolveProviderCredential(
   }
   const envKey = readEnvKey(provider);
   return envKey
-    ? { available: true, source: "env", fingerprint: fingerprintKey(envKey) }
-    : { available: false, source: null, fingerprint: null };
+    ? {
+        available: true,
+        source: "env",
+        fingerprint: fingerprintKey(envKey),
+        verifiedByUse: verifiedCredentialFingerprints.get(provider) === fingerprintKey(envKey)
+      }
+    : { available: false, source: null, fingerprint: null, verifiedByUse: false };
 }
 
 /** Main-process-only accessor for a resolved key. Never crosses IPC. */
@@ -135,11 +160,13 @@ export async function storeProviderApiKey(provider: ProviderId, value: string): 
     throw new Error("此平台尚未支援系統憑證儲存；請以主程序環境變數啟動");
   }
   await upsertPassword(PROVIDER_ACCOUNTS[provider], trimmed);
+  resetProviderVerification(provider);
 }
 
 export async function clearProviderApiKey(provider: ProviderId): Promise<boolean> {
   if (!supportsCredentialStore()) {
     return false;
   }
+  resetProviderVerification(provider);
   return deletePassword(PROVIDER_ACCOUNTS[provider]);
 }

@@ -14,6 +14,14 @@ trace stays in Run artifacts.
 
 ## Core rules
 
+Next-version decisions confirmed on 2026-09-07 are specified in
+[v0.4 使用回饋改進規格](v04-usability-improvements.md). They are planned,
+not implemented: OpenRouter replaces direct OpenAI for new requests;
+same-submission Results share one comparison page; disclaimer acknowledgement
+is separate from exact-plan approval; a local question library enables reuse;
+visible submission status and Main-side deduplication prevent duplicate jobs.
+Historical OpenAI artifacts remain readable and immutable.
+
 - Persona fields need raw-input support or explicit per-inference acceptance;
   unsupported facts stay `not provided`.
 - Every external model call requires a current Preflight approval keyed by the
@@ -33,11 +41,14 @@ trace stays in Run artifacts.
   management surface for Personas, Question Sets, Sources, and Simulation
   Batches. The App reads and validates it directly; immutable Runs and reports
   remain in a companion open-directory Project in the first v0.3 tracer. The
-  read-only `validateWorkbook` implementation and contract live in
+  `validateWorkbook` and the Desktop import contract live in
   [Workbook input format](../formats/workbook-input.md). Desktop Main can
-  choose a `.xlsx` file and return the validation result; draft import,
-  last-Project memory, and execution wiring remain pending.
+  choose, validate, and import a `.xlsx` file into an in-memory draft; it also
+  remembers the last Project/Workbook path in app-data.
   The imported document is a 1–30 Persona batch, not a single-Persona draft.
+  Import does not confirm a Persona or write the Persona library. The user must
+  explicitly confirm imported Personas; this preserves each Workbook
+  `personaId` and mints only the Persona Version id.
 - The App remembers the last valid Project directory in app-data and attempts
   to reopen it at startup. A missing or invalid path produces a recoverable
   notice; it never causes implicit creation, deletion, or overwrite.
@@ -57,3 +68,7 @@ trace stays in Run artifacts.
   Sample request matrix. Each Persona remains an independently attributable
   Run/Job and Result; v0.3 does not automatically speak for the group or
   perform cross-Persona Synthesis.
+- The Run action submits only the plan hash the user actually saw. It never
+  silently generates and approves a fresh Preflight. Changed draft input makes
+  Main reject the stale hash, and every later Run needs a newly viewed
+  Preflight.

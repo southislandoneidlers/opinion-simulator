@@ -2,6 +2,11 @@
 
 Freely navigable stages; gates enforce safety, not navigation order.
 
+Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
+defines the confirmed 2026-09-07 changes to batch comparison, disclaimer
+retention, question reuse, and visible submission feedback. The sections below
+describe existing behavior; the linked next-version behavior is not implemented.
+
 Stages:
 
 1. Overview — project identity, directory selection. An empty folder starts a
@@ -21,11 +26,12 @@ Stages:
 7. Results — Direct Reaction first, then labelled recommendations, structured
    analysis, trace details. (Presentation revision pending user decision.)
 
-## Planned v0.3 workspace changes
+## Implemented v0.3 workspace behavior
 
 - Overview can choose a `.xlsx` Workbook and show validation Issues or a batch
-  summary. This check does not write a Project, call a provider, or create an
-  ExecutionPlan.
+  summary. Validation does not write a Project, call a provider, or create an
+  ExecutionPlan. Import fills an in-memory draft; imported Personas remain
+  unconfirmed until the user confirms them in the Persona stage.
 - Startup attempts to reopen the last successfully opened valid Project. A
   stale remembered path keeps the App usable and presents a clear choose-
   another-folder action.
@@ -34,16 +40,16 @@ Stages:
   of duplicate forms.
 - After saving a key, keep a visible "已安全儲存" receipt on the settings card.
   Separately label whether the key has ever completed a provider request, so
-  "stored" and "verified by use" are not confused. Provider verification after
-  a live request is still pending.
+  "stored" and "verified by use" are not confused. Verification is associated
+  with the fingerprint of the credential that completed a live request and is
+  cleared when that credential changes.
 - Credential identity uses provider + source + a non-reversible short
   fingerprint computed in Main; no raw value, reveal button, or copyable
   suffix appears. Optional user-defined labels are still pending.
-- After a Run completes, the previous Preflight hash is consumed. The App
-  refreshes Preflight for the next Run when the outbound content is unchanged,
-  so a mocked Run can be followed by a Live Run without a stale-hash failure.
-  If Source, Persona, questions, provider, or model changed, the user is sent
-  back to Preflight.
+- The Run action uses only the displayed Preflight hash. If Source, Persona,
+  questions, provider, model, or matrix changed, Main rejects it as stale.
+  After every completed Run, the App clears the approval and requires a newly
+  generated and reviewed Preflight for the next Run.
 - Personas becomes a confirmed-Version multi-select of 1–30 people. Preflight
   presents every selected Persona, Sample count, and total request matrix;
   Results are grouped by Persona and retain per-Persona retry/trace controls.

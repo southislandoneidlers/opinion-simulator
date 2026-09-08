@@ -116,26 +116,31 @@ only missing Jobs; Gemini/OpenAI contract suites pass without live CI calls.
 
 ## v0.3 — Material and Persona workflow
 
-Status: in progress. The core Workbook validator and Desktop choose/validate
-IPC are implemented; last-Project memory, Settings, and multi-Persona
-execution remain pending.
+Status: completed in the working tree on 2026-09-03 and review-remediated the
+same day. Local automated suites and the Desktop production build pass; no
+live provider call or packaged GUI walkthrough was performed during the
+remediation.
+
+2026-09-07：使用者回報實測正常運作，並提出下一版五項改進。這是使用者回報，
+未提供完整平台／provider／exit-criteria 測試矩陣；保留先前測試的驗證邊界。
 
 ### 中文現況（給人類閱讀）
 
-v0.3 的檢查員已接到桌面程式：使用者可以選擇固定格式的 Excel，由主程序讀檔並
-顯示檢查結果或錯誤碼。這仍不是完整的「匯入功能」：檢查通過不會建立 Project、
-不會呼叫模型，也不能把 1–30 位 Persona 送進 Preflight 與 queue。上次開啟的
-專案路徑記憶與統一 Settings 也尚未做。這些是下一階段的工作，且仍必須保留既有
-的憑證與人工核准安全門檻。
+v0.3 已串成可測試的完整本機流程：Excel 由 Main 驗證並匯入記憶體草稿；匯入不會
+自動確認 Persona，使用者必須在 App 明確確認後，才能檢視綁定完整矩陣 hash 的
+Preflight。可從 library 勾選 1–30 位已確認 Persona，每位各自排入可重試 Job/Run；
+樣本數 3 會保存三份 Sample 並產生 exact-text Stability Comparison。Settings、
+上次 Project/Workbook 記憶、檔案抽取與 grouped Results 也已接線。真實 provider
+與打包 GUI 仍是本次未驗證的邊界，不應由本機 mocked 測試推論為已通過。
 
 Entry gate satisfied on 2026-08-30: the user reviewed the five-sheet
 fixed-format Workbook and accepted it as the v0.3 usability baseline. The
 importer public contract was revised on 2026-08-31 in
 [Workbook input format](formats/workbook-input.md) after user review
-(`validateWorkbook` in core; 1–30 Personas per batch). Desktop Main can
-choose and validate a Workbook; it does not yet import into a draft, remember
-the last Project, or run a multi-Persona batch. Existing open-directory
-Projects must not be rewritten.
+(`validateWorkbook` in core; 1–30 Personas per batch). Desktop Main now
+chooses, validates, and imports a Workbook, remembers the last
+Project/Workbook paths, and runs an approved multi-Persona batch without
+rewriting existing immutable Run artifacts.
 
 Goal: remove repeated setup on every launch and scale the existing
 one-Source/one-Question-Set workflow from one Persona to 1–30 Personas
@@ -206,6 +211,21 @@ Exit criteria:
   tests pass across supported platforms.
 
 ## v0.4 — Review, synthesis, and complete exports
+
+Status: five usability improvements confirmed on 2026-09-07; specification
+recorded, implementation not started. See the canonical
+[v0.4 使用回饋改進規格](product/v04-usability-improvements.md).
+
+優先增量順序（先完成以下五項，再接續原有 Synthesis／匯出工作）：
+
+1. 明顯的送出中／成功／失敗提示與 Main／queue 防止重複送出。
+2. Preflight 聲明勾選保留，與每次精確計畫的預覽／核准分離。
+3. 同次送出、同份材料的所有 Persona 意見在同頁比較，持久保存批次關聯。
+4. 可保存與重用單題／多題問題集的本機問題庫。
+5. 新請求以 OpenRouter 取代 OpenAI 直連，保留 Gemini 與舊 OpenAI 結果讀取。
+
+Each increment must pass the linked specification's acceptance cases before
+being marked complete. Existing v0.4 scope below remains scheduled afterward.
 
 Scope:
 

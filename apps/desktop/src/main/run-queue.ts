@@ -37,6 +37,16 @@ export type JobRequest = {
   model: string;
   createdAt: string;
   questionSet: QuestionSet;
+  sampleCount: 1 | 3;
+};
+
+export type StoredSampleResult = {
+  sampleId: string;
+  result: StructuredResult;
+  rawResponse: unknown;
+  provider: ProviderId;
+  model: string;
+  completedAt: string;
 };
 
 export type RunJob = {
@@ -55,13 +65,7 @@ export type RunJob = {
   error: string | null;
   attempt: number;
   /** A provider response saved before Project publication can be recovered without another call. */
-  result: {
-    result: StructuredResult;
-    rawResponse: unknown;
-    provider: ProviderId;
-    model: string;
-    completedAt: string;
-  } | null;
+  result: { samples: StoredSampleResult[] } | null;
   request: JobRequest;
 };
 
@@ -128,6 +132,24 @@ export function loadQueue(): RunQueue {
     throw new Error(`Run queue 檔案格式不符（${path}）；請手動檢查或備份後處理`);
   }
   for (const job of queue.jobs as RunJob[]) {
+    if (job.request && job.request.sampleCount === undefined) {
+      job.request.sampleCount = 1;
+    }
+    const legacyResult = job.result as unknown as StoredSampleResult | null;
+    if (legacyResult && !Array.isArray((job.result as { samples?: unknown }).samples)) {
+      job.result = {
+        samples: [
+          {
+            sampleId: `${job.runId}-sample-001`,
+            result: legacyResult.result,
+            rawResponse: legacyResult.rawResponse,
+            provider: legacyResult.provider,
+            model: legacyResult.model,
+            completedAt: legacyResult.completedAt
+          }
+        ]
+      };
+    }
     if (
       !job?.jobId ||
       !job?.runId ||
@@ -135,7 +157,8 @@ export function loadQueue(): RunQueue {
       !job?.request?.persona?.id ||
       !job?.approval ||
       job.approval.planHash !== job.planHash ||
-      !Object.prototype.hasOwnProperty.call(job, "result")
+      !Object.prototype.hasOwnProperty.call(job, "result") ||
+      (job.request.sampleCount !== 1 && job.request.sampleCount !== 3)
     ) {
       throw new Error(`Run queue 含不完整條目（${path}）`);
     }

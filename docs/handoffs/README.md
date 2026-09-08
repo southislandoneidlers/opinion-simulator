@@ -10,6 +10,9 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-09-07 | v0.4 使用回饋與五項改進計畫 | 規格已記錄；尚未實作 | [2026-09-07-v04-usability-feedback.md](2026-09-07-v04-usability-feedback.md) |
+| 2026-09-03 | v0.3 code-review remediation | Complete; 161 tests + full build | [2026-09-03-v03-review-remediation.md](2026-09-03-v03-review-remediation.md) |
+| 2026-09-03 | v0.3 Increments 1–5 implementation complete | Complete; 152 tests | [2026-09-03-v03-implementation-complete.md](2026-09-03-v03-implementation-complete.md) |
 | 2026-09-02 | Credential receipt, mocked-then-live Run, clearer errors | Complete | [2026-09-02-v03-run-credential-ux.md](2026-09-02-v03-run-credential-ux.md) |
 | 2026-09-02 | Desktop Workbook choose/validate IPC | Complete | [2026-09-02-v03-workbook-validate-ipc.md](2026-09-02-v03-workbook-validate-ipc.md) |
 | 2026-09-01 | Workbook 驗證器中文閱讀導覽 | 完成；不改變程式行為 | [2026-09-01-v03-workbook-validator-human-guide-zh-TW.md](2026-09-01-v03-workbook-validator-human-guide-zh-TW.md) |

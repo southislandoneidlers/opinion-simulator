@@ -19,6 +19,16 @@ export function registerIpc(): void {
         return null;
       }
       return result.filePaths[0];
+    },
+    chooseMaterialFile: async () => {
+      const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [{ name: "文件與純文字", extensions: ["txt", "md", "markdown", "docx", "pdf"] }]
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return null;
+      }
+      return result.filePaths[0];
     }
   });
 

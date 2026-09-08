@@ -6,6 +6,8 @@ import {
   isProviderId,
   fingerprintKey,
   loadProviderApiKey,
+  markProviderVerified,
+  resetProviderVerification,
   resolveProviderCredential,
   setCredentialStoreForTests,
   storeProviderApiKey,
@@ -61,6 +63,7 @@ describe("keychain-backed provider credential storage", () => {
   beforeEach(() => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    resetProviderVerification();
   });
 
   afterEach(() => {
@@ -96,7 +99,8 @@ describe("keychain-backed provider credential storage", () => {
     expect(resolved).toEqual({
       available: true,
       source: "keychain",
-      fingerprint: fingerprintKey(FAKE_KEY)
+      fingerprint: fingerprintKey(FAKE_KEY),
+      verifiedByUse: false
     });
     expect(resolved.fingerprint).toMatch(/^[a-f0-9]{8}$/);
     expect(resolved.fingerprint).not.toBe(FAKE_KEY);
@@ -112,20 +116,38 @@ describe("keychain-backed provider credential storage", () => {
     expect(await resolveProviderCredential("gemini")).toEqual({
       available: true,
       source: "env",
-      fingerprint: fingerprintKey(FAKE_KEY)
+      fingerprint: fingerprintKey(FAKE_KEY),
+      verifiedByUse: false
     });
     delete process.env.GEMINI_API_KEY;
     process.env.OPENAI_API_KEY = FAKE_KEY;
     expect(await resolveProviderCredential("openai")).toEqual({
       available: true,
       source: "env",
-      fingerprint: fingerprintKey(FAKE_KEY)
+      fingerprint: fingerprintKey(FAKE_KEY),
+      verifiedByUse: false
     });
     expect(await resolveProviderCredential("gemini")).toEqual({
       available: false,
       source: null,
-      fingerprint: null
+      fingerprint: null,
+      verifiedByUse: false
     });
+  });
+
+  it("tracks verifiedByUse status independently", async () => {
+    setCredentialStoreForTests(makeStore().store);
+    process.env.GEMINI_API_KEY = FAKE_KEY;
+    expect((await resolveProviderCredential("gemini")).verifiedByUse).toBe(false);
+
+    markProviderVerified("gemini", FAKE_KEY);
+    expect((await resolveProviderCredential("gemini")).verifiedByUse).toBe(true);
+
+    process.env.GEMINI_API_KEY = "A-DIFFERENT-FAKE-KEY";
+    expect((await resolveProviderCredential("gemini")).verifiedByUse).toBe(false);
+
+    resetProviderVerification("gemini");
+    expect((await resolveProviderCredential("gemini")).verifiedByUse).toBe(false);
   });
 
   it("fails safely to the environment fallback when the Keychain interaction breaks", async () => {
@@ -134,13 +156,15 @@ describe("keychain-backed provider credential storage", () => {
     expect(await resolveProviderCredential("gemini")).toEqual({
       available: true,
       source: "env",
-      fingerprint: fingerprintKey(FAKE_KEY)
+      fingerprint: fingerprintKey(FAKE_KEY),
+      verifiedByUse: false
     });
     delete process.env.GEMINI_API_KEY;
     expect(await resolveProviderCredential("gemini")).toEqual({
       available: false,
       source: null,
-      fingerprint: null
+      fingerprint: null,
+      verifiedByUse: false
     });
     expect(await loadProviderApiKey("gemini")).toBeNull();
   });

@@ -5,10 +5,10 @@
 - `.agents/skills/opinion-simulator/scripts/opinion_simulator.py` — deterministic
   Python CLI (stdlib only): `render-preflight`, `build-project`,
   `validate-project`, `render-synthesis-preflight`, `build-synthesis-project`.
-- `packages/core` — hashing, canonical JSON, Persona confirmation, plan/preflight,
-  report rendering, IPC channel allow-list names, and the v0.3 read-only
-  `validateWorkbook` (bytes in, `ValidatedWorkbook` out). No separate workbook
-  package.
+- `packages/core` — hashing, canonical JSON, Persona confirmation, single/batch
+  plan and Preflight rendering, exact-text Stability Comparison, report
+  rendering, IPC allow-list names, and `validateWorkbook` (bytes in,
+  `ValidatedWorkbook` out). No separate workbook package.
 - `packages/project-store` — Project writing and snapshot reading. New Projects
   are staged then published into an absent or empty directory. An existing valid
   Project receives appended Runs (next-sequence artifacts + atomic index
@@ -27,7 +27,9 @@
   copied into drafts.
   Restart resumes only Jobs whose Run artifact is still missing. A provider
   response is saved as a partial Job before Project publication, so a retry
-  writes the stored response instead of calling a live provider again.
+  writes stored Samples and requests only missing Samples instead of repeating
+  a completed provider call. Desktop Main also owns Workbook draft import,
+  last-Project memory, and bounded PDF/DOCX/TXT/Markdown extraction.
 
 ## Dependency direction
 
@@ -35,4 +37,6 @@ desktop → core, project-store, providers-gemini, providers-openai.
 Providers depend only on core contracts. Python CLI depends only on published
 schemas under `schemas/v0.0/`. Desktop Main reads a user-chosen `.xlsx` path
 and calls `validateWorkbook` in core; Renderer does not parse `.xlsx` and
-must not send file bytes over IPC.
+must not send file bytes over IPC. Workbook import remains an in-memory draft
+operation until explicit App-owned Persona confirmation and exact Preflight
+approval.

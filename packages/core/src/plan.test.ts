@@ -4,6 +4,7 @@ import {
   assemblePrompt,
   approvePreflight,
   assertCurrentPreflightApproval,
+  batchPreflightView,
   makeExecutionPlan,
   planHash,
   PROMPT_TEMPLATE_VERSION,
@@ -123,5 +124,38 @@ describe("prompt template contract (v2 ordering)", () => {
         approvedAt: "2026-08-26T00:00:00Z"
       })
     ).toThrow(/過期/);
+  });
+});
+
+describe("batch Preflight estimates", () => {
+  it("sums each Persona plan instead of multiplying the first estimate", () => {
+    const first = makePlan();
+    const second = {
+      ...makePlan(),
+      estimate: {
+        ...makePlan().estimate,
+        approximateInputTokensPerRequest: first.estimate.approximateInputTokensPerRequest + 100
+      }
+    };
+    const view = batchPreflightView({
+      batchId: "batch-001",
+      sourceId: "source-001",
+      questionCount: 1,
+      sampleCount: 3,
+      plans: [
+        { personaId: "persona-001", label: "甲", plan: first, runId: "run-001" },
+        { personaId: "persona-002", label: "乙", plan: second, runId: "run-002" }
+      ],
+      provider: "gemini",
+      model: "gemini-3.6-flash",
+      endpointClass: "google-generativelanguage",
+      createdAt: "2026-09-03T00:00:00Z"
+    });
+
+    expect(view.estimate.approximateTotalInputTokens).toBe(
+      (first.estimate.approximateInputTokensPerRequest +
+        second.estimate.approximateInputTokensPerRequest) *
+        3
+    );
   });
 });

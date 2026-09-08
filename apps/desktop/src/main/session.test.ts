@@ -9,6 +9,7 @@ import {
   createDraft,
   enqueueAndProcess,
   enqueueRun,
+  importWorkbookToDraft,
   listQueuedJobs,
   openOrCreateDraft,
   processQueue,
@@ -16,14 +17,23 @@ import {
   resumeMissingJobs,
   retryJob,
   runMocked,
-  saveDraft
+  saveDraft,
+  selectDraftPersonas
 } from "./session";
+import { confirmManualPersona } from "@opinion-simulator/core";
 import { addPersona, configureLibraryDirectory, listPersonas } from "./persona-library";
+import { configureLastProjectDirectory } from "./last-project";
 import { configureQueueDirectory, loadQueue, saveQueue } from "./run-queue";
+
+const GOLDEN_WORKBOOK = join(
+  __dirname,
+  "../../../../packages/core/fixtures/workbook/Opinion-Simulator-v0.3-Workbook-簡易模板.xlsx"
+);
 
 function configureSessionStores(): void {
   configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-persona-lib-session-")));
   configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-run-queue-session-")));
+  configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-last-project-session-")));
 }
 
 function prepareDraft(projectDirectory: string): void {
@@ -142,6 +152,13 @@ describe("mocked desktop run", () => {
     await expect(runMocked(projectDirectory, "", true)).rejects.toThrow("尚未確認 Persona Version");
   });
 
+  it("refuses to silently coerce an unsupported Workbook sample count", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-sample-count-"));
+    prepareDraft(projectDirectory);
+    saveDraft({ projectDirectory, sampleCount: 2 });
+    expect(() => renderDraftPreflight(projectDirectory)).toThrow(/樣本數.*1.*3/);
+  });
+
   it("rejects an approval hash after the Source changes", async () => {
     const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-stale-preflight-"));
     prepareDraft(projectDirectory);
@@ -239,6 +256,30 @@ describe("persona library integration", () => {
     expect(second.saved).toBe(false);
     expect(listPersonas().personas).toHaveLength(1);
   });
+
+  it("selects 1-30 confirmed library Personas for a batch Preflight", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-lib-batch-"));
+    prepareDraft(projectDirectory);
+    const second = confirmManualPersona({
+      id: "persona-version-parent-v1",
+      personaId: "persona-parent",
+      label: "家長",
+      rawInput: "我是學生家長，在意溝通透明。",
+      fields: { roleAndContext: "我是學生家長，在意溝通透明。" },
+      confirmedAt: "2026-09-03T00:00:00Z",
+      confirmedBy: "desktop-user",
+      realPersonApplies: false
+    });
+    addPersona(second, null);
+    const ids = listPersonas().personas.map((entry) => entry.personaVersion.id);
+
+    const draft = selectDraftPersonas(projectDirectory, ids);
+    expect(draft.personas).toHaveLength(2);
+    const view = renderDraftPreflight(projectDirectory) as { isBatch: boolean; personas: unknown[] };
+    expect(view.isBatch).toBe(true);
+    expect(view.personas).toHaveLength(2);
+    expect(() => selectDraftPersonas(projectDirectory, [])).toThrow(/1.*30/);
+  });
 });
 
 describe("persistent run queue", () => {
@@ -266,6 +307,56 @@ describe("persistent run queue", () => {
     );
     expect(JSON.parse(python).status).toBe("valid");
     expect(JSON.parse(python).runsChecked).toBe(1);
+  });
+
+  it("executes and persists all three approved Samples with an exact-text Stability Comparison", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-stability-"));
+    prepareDraft(projectDirectory);
+    saveDraft({ projectDirectory, sampleCount: 3 });
+
+    const preflight = renderDraftPreflight(projectDirectory) as {
+      planHash: string;
+      sampleCount: number;
+      sampleIds: string[];
+    };
+    expect(preflight.sampleCount).toBe(3);
+    expect(preflight.sampleIds).toHaveLength(3);
+
+    const completed = await enqueueAndProcess(projectDirectory, preflight.planHash, true, "mocked");
+    expect(completed.jobs[0]?.status).toBe("completed");
+    expect(completed.snapshot).not.toBeNull();
+
+    const run = JSON.parse(
+      readFileSync(join(projectDirectory, "runs", `${completed.jobs[0]?.runId}.json`), "utf8")
+    ) as {
+      executionPlan: { sampleIds: string[] };
+      samples: Array<{ sampleId: string }>;
+      stabilityComparison: { mode: string };
+    };
+    expect(run.samples.map((sample) => sample.sampleId)).toEqual(run.executionPlan.sampleIds);
+    expect(run.samples).toHaveLength(3);
+    expect(run.stabilityComparison.mode).toBe("three-sample-exact-normalized-comparison");
+
+    const python = execFileSync(
+      "python3",
+      ["-B", ".agents/skills/opinion-simulator/scripts/opinion_simulator.py", "validate-project", projectDirectory],
+      { encoding: "utf8", cwd: join(__dirname, "..", "..", "..", "..") }
+    );
+    expect(JSON.parse(python).status).toBe("valid");
+  });
+
+  it("surfaces a single Job execution error after recording it", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-job-error-"));
+    prepareDraft(projectDirectory);
+    const planHash = currentPlanHash(projectDirectory);
+    writeFileSync(join(projectDirectory, "foreign.txt"), "do not overwrite", "utf8");
+
+    await expect(enqueueAndProcess(projectDirectory, planHash, true, "mocked")).rejects.toThrow(
+      /Refusing to write/
+    );
+    expect(listQueuedJobs(projectDirectory)).toMatchObject([
+      { status: "partial", error: expect.stringMatching(/Refusing to write/) }
+    ]);
   });
 
   it("resumes an interrupted running Job only when its Run artifact is missing", async () => {
@@ -330,5 +421,64 @@ describe("persistent run queue", () => {
       "mocked"
     );
     expect(second.snapshot?.runIds).toHaveLength(2);
+  });
+
+  it("continues later Jobs when one queued Job fails", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-queue-continue-"));
+    prepareDraft(projectDirectory);
+    const first = enqueueRun(projectDirectory, currentPlanHash(projectDirectory), true, "mocked");
+    saveDraft({
+      projectDirectory,
+      questions: ["你會支持這項計畫嗎？", "推動時最大的阻力是什麼？", "還缺什麼資訊？"]
+    });
+    const second = enqueueRun(projectDirectory, currentPlanHash(projectDirectory), true, "mocked");
+    const queue = loadQueue();
+    const stored = queue.jobs.find((item) => item.jobId === first.jobId);
+    expect(stored).toBeTruthy();
+    stored!.planHash = "0".repeat(64);
+    stored!.approval = { ...stored!.approval, planHash: stored!.planHash };
+    saveQueue(queue);
+    const snapshot = await processQueue(projectDirectory);
+    expect(listQueuedJobs(projectDirectory).find((job) => job.jobId === first.jobId)?.status).toBe(
+      "failed"
+    );
+    expect(listQueuedJobs(projectDirectory).find((job) => job.jobId === second.jobId)?.status).toBe(
+      "completed"
+    );
+    expect(snapshot?.runIds).toEqual([second.runId]);
+  });
+});
+
+describe("workbook draft import", () => {
+  beforeEach(() => {
+    configureSessionStores();
+  });
+
+  it("keeps an imported workbook draft when the empty folder is reopened", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-import-keep-"));
+    createDraft(projectDirectory, "Import Target");
+    const imported = await importWorkbookToDraft(projectDirectory, GOLDEN_WORKBOOK);
+    expect(imported.personaCount).toBe(2);
+    expect(imported.sourceText.length).toBeGreaterThan(0);
+    expect(imported.questions.length).toBeGreaterThan(0);
+
+    const reopened = openOrCreateDraft(projectDirectory, "should not wipe");
+    expect(reopened.openedExisting).toBe(false);
+    expect(reopened.sourceText).toBe(imported.sourceText);
+    expect(reopened.personaRaw).toBe(imported.personaRaw);
+
+    expect(() => renderDraftPreflight(projectDirectory)).toThrow(/確認.*Persona/);
+    expect(imported.personas.map((persona) => persona.personaId)).toEqual([
+      "persona-001",
+      "persona-002"
+    ]);
+
+    confirmDraftPersona(projectDirectory);
+    const view = renderDraftPreflight(projectDirectory) as {
+      isBatch: boolean;
+      personas: unknown[];
+    };
+    expect(view.isBatch).toBe(true);
+    expect(view.personas).toHaveLength(2);
   });
 });

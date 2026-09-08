@@ -12,6 +12,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import {
   DISCLAIMER,
+  compareStability,
   assertSafeIpcValue,
   canonicalJson,
   hashJson,
@@ -42,6 +43,17 @@ export type ProjectSnapshot = {
   rawResponse: unknown;
   provider: string | null;
   model: string | null;
+  runs?: Array<{
+    runId: string;
+    personaId?: string;
+    personaVersionId?: string;
+    personaLabel: string;
+    result: StructuredResult | null;
+    rawResponse: unknown;
+    stabilityComparison?: unknown;
+    provider: string | null;
+    model: string | null;
+  }>;
 };
 
 export type WriteTargetKind = "absent" | "empty" | "project" | "occupied";
@@ -91,11 +103,14 @@ type CompletedRunInput = {
   planHash: string;
   runId: string;
   reportId: string;
-  sampleId: string;
-  result: StructuredResult;
-  rawResponse: unknown;
-  provider: string;
-  model: string;
+  samples: Array<{
+    sampleId: string;
+    result: StructuredResult;
+    rawResponse: unknown;
+    provider: string;
+    model: string;
+    completedAt: string;
+  }>;
   approval: {
     schemaVersion: "0.0";
     runId: string;
@@ -777,6 +792,21 @@ function sourceRecord(input: CompletedRunInput) {
 }
 
 function buildRunDocument(input: CompletedRunInput) {
+  if (input.samples.length !== input.plan.sampleCount) {
+    throw new Error("Completed Samples do not match the approved Execution Plan.");
+  }
+  const stabilityComparison =
+    input.samples.length === 3
+      ? compareStability(
+          input.samples.map((sample) => ({
+            sampleId: sample.sampleId,
+            parsedResult: sample.result
+          }))
+        )
+      : {
+          mode: "not-applicable",
+          reason: "One-Sample quick mode does not produce a Stability Comparison."
+        };
   return {
     schemaVersion: "0.0",
     runId: input.runId,
@@ -792,9 +822,9 @@ function buildRunDocument(input: CompletedRunInput) {
       preflightApproval: input.approval,
       planHash: input.planHash
     },
-    samples: [
-      {
-        sampleId: input.sampleId,
+    samples: input.samples.map((sample) =>
+      ({
+        sampleId: sample.sampleId,
         personaRef: input.plan.personaRefs[0],
         status: "completed",
         attemptEvents: [
@@ -802,30 +832,27 @@ function buildRunDocument(input: CompletedRunInput) {
         ],
         normalizedRequest: {
           runId: input.runId,
-          sampleId: input.sampleId,
+          sampleId: sample.sampleId,
           planHash: input.planHash,
-          provider: input.provider,
-          model: input.model
+          provider: sample.provider,
+          model: sample.model
         },
         normalizedResponse: {
-          provider: input.provider,
-          model: input.model,
+          provider: sample.provider,
+          model: sample.model,
           responseFormat: "structured-json",
-          validationState: input.result.validationState
+          validationState: sample.result.validationState
         },
-        rawProviderResponse: input.rawResponse,
-        parsedResult: input.result,
+        rawProviderResponse: sample.rawResponse,
+        parsedResult: sample.result,
         validationWarnings: [],
         providerUsage: { reported: false, note: "v0.1 desktop tracer" },
         startedAt: input.approval.approvedAt,
-        completedAt: input.completedAt,
+        completedAt: sample.completedAt,
         latencyMs: 0
-      }
-    ],
-    stabilityComparison: {
-      mode: "not-applicable",
-      reason: "One-Sample quick mode does not produce a Stability Comparison."
-    },
+      })
+    ),
+    stabilityComparison,
     synthesisAttribution: null,
     report: {
       reportId: input.reportId,
@@ -907,7 +934,7 @@ function writeFreshProject(target: string, input: CompletedRunInput): void {
     questionTitle: input.questionSet.title,
     questions: input.questionSet.questions,
     sourceText: input.sourceText,
-    result: input.result,
+    result: input.samples[0].result,
     runId: input.runId,
     methodologyHash: methodHash
   });
@@ -978,7 +1005,7 @@ function appendCompletedRun(target: string, existing: ProjectInspection, input: 
     questionTitle: input.questionSet.title,
     questions: input.questionSet.questions,
     sourceText,
-    result: input.result,
+    result: input.samples[0].result,
     runId: input.runId,
     methodologyHash: methodHash
   });
@@ -1056,7 +1083,7 @@ function appendCompletedRun(target: string, existing: ProjectInspection, input: 
 }
 
 export function writeCompletedRun(input: CompletedRunInput): void {
-  if (!isCredentialSafeObject(input.rawResponse)) {
+  if (input.samples.length === 0 || input.samples.some((sample) => !isCredentialSafeObject(sample.rawResponse))) {
     throw new Error("Refusing to persist a raw provider response with credential-shaped fields.");
   }
   const target = resolve(input.projectDirectory);
@@ -1128,6 +1155,29 @@ export function readSnapshot(projectDirectory: string): ProjectSnapshot {
   if (reportId) {
     reportMarkdown = readFileSync(join(projectDirectory, "reports", `${reportId}.md`), "utf8");
   }
+  const runs = runIds
+    .map((rId) => {
+      try {
+        const run = JSON.parse(readFileSync(join(projectDirectory, "runs", `${rId}.json`), "utf8"));
+        const pRef = run.executionPlan?.personaRefs?.[0];
+        const matchedPersona = versions.find((v) => v.id === pRef?.personaVersionId);
+        return {
+          runId: rId,
+          personaId: pRef?.personaId,
+          personaVersionId: pRef?.personaVersionId,
+          personaLabel: matchedPersona?.label ?? pRef?.personaId ?? rId,
+          result: run.samples[0]?.parsedResult ?? null,
+          rawResponse: run.samples[0]?.rawProviderResponse ?? null,
+          stabilityComparison: run.stabilityComparison ?? null,
+          provider: run.samples[0]?.normalizedRequest?.provider ?? run.executionPlan?.provider ?? null,
+          model: run.samples[0]?.normalizedRequest?.model ?? run.executionPlan?.model ?? null
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
   return {
     projectDirectory,
     projectId: project.projectId,
@@ -1143,6 +1193,7 @@ export function readSnapshot(projectDirectory: string): ProjectSnapshot {
     result,
     rawResponse,
     provider,
-    model
+    model,
+    runs
   };
 }

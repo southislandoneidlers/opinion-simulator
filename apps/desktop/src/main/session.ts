@@ -5,6 +5,8 @@ import {
   DISCLAIMER,
   approvePreflight,
   assertCurrentPreflightApproval,
+  batchPreflightView,
+  computeBatchPlanHash,
   confirmManualPersona,
   makeExecutionPlan,
   planHash,
@@ -32,11 +34,14 @@ import { liveOpenaiGenerate } from "@opinion-simulator/providers-openai";
 import {
   isProviderId,
   loadProviderApiKey,
+  markProviderVerified,
   resolveProviderCredential,
   type CredentialSource
 } from "./credentials";
 import { stalePreflightMessage, wrapProviderCallError } from "./user-messages";
-import { autoSavePersona } from "./persona-library";
+import { autoSavePersona, listPersonas } from "./persona-library";
+import { saveLastProjectMemory } from "./last-project";
+import { validateWorkbookAtPath } from "./workbook-file";
 import {
   appendJob,
   clearCancel,
@@ -51,7 +56,8 @@ import {
   updateJob,
   type JobMode,
   type JobSummary,
-  type RunJob
+  type RunJob,
+  type StoredSampleResult
 } from "./run-queue";
 
 export type FrozenArtifacts = {
@@ -73,6 +79,10 @@ export type DraftState = {
   realPersonApplies: boolean;
   questions: string[];
   persona: PersonaVersion | null;
+  personas?: PersonaVersion[];
+  importedPersonas?: Array<{ personaId: string; label: string; rawInput: string }>;
+  batchId?: string;
+  sampleCount?: number;
   provider: ProviderId;
   model: string;
   createdAt: string;
@@ -112,6 +122,14 @@ export function createDraft(projectDirectory: string, title: string): DraftState
   return draft;
 }
 
+function hasUnpublishedBatch(draft: DraftState): boolean {
+  return (
+    Boolean(draft.batchId) ||
+    Boolean(draft.personas && draft.personas.length > 0) ||
+    Boolean(draft.importedPersonas && draft.importedPersonas.length > 0)
+  );
+}
+
 export function openOrCreateDraft(
   projectDirectory: string,
   title: string
@@ -122,7 +140,16 @@ export function openOrCreateDraft(
       `拒絕寫入：${projectDirectory} 不是空資料夾，也不是有效的專案。現有內容不會被刪除。`
     );
   }
+  const current = drafts.get(projectDirectory);
+  if (current && (kind === "empty" || kind === "absent")) {
+    saveLastProjectMemory({ projectDirectory });
+    return { ...current, openedExisting: false };
+  }
   if (kind === "project") {
+    if (current && hasUnpublishedBatch(current)) {
+      saveLastProjectMemory({ projectDirectory });
+      return { ...current, openedExisting: true };
+    }
     const existing = inspectProject(projectDirectory);
     const snapshot = readSnapshot(projectDirectory);
     if (!existing) {
@@ -148,9 +175,12 @@ export function openOrCreateDraft(
       frozenArtifacts: null
     };
     drafts.set(projectDirectory, draft);
+    saveLastProjectMemory({ projectDirectory });
     return { ...draft, openedExisting: true };
   }
-  return { ...createDraft(projectDirectory, title), openedExisting: false };
+  const created = createDraft(projectDirectory, title);
+  saveLastProjectMemory({ projectDirectory });
+  return { ...created, openedExisting: false };
 }
 
 export function saveDraft(input: Partial<DraftState> & { projectDirectory: string }): DraftState {
@@ -168,7 +198,10 @@ export function saveDraft(input: Partial<DraftState> & { projectDirectory: strin
     ...current,
     ...input,
     persona: current.persona,
-    frozenArtifacts: current.frozenArtifacts
+    frozenArtifacts: current.frozenArtifacts,
+    personas: input.personas ?? current.personas,
+    batchId: input.batchId ?? current.batchId,
+    sampleCount: input.sampleCount ?? current.sampleCount
   };
   drafts.set(input.projectDirectory, next);
   return next;
@@ -179,29 +212,184 @@ export function confirmDraftPersona(projectDirectory: string): DraftState {
   if (!current) {
     throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
   }
-  // 單一背景輸入：整段原文即為直接支援的角色與情境，不需使用者重複填寫。
-  const persona = confirmManualPersona({
-    id: slugId("persona-version", current.personaLabel || "persona"),
-    personaId: slugId("persona", current.personaLabel || "persona"),
-    label: current.personaLabel,
-    rawInput: current.personaRaw,
-    fields: { roleAndContext: current.personaRaw.trim() },
-    confirmedAt: nowIso(),
-    confirmedBy: "desktop-user",
-    realPersonApplies: current.realPersonApplies,
-    warningAcknowledgedAt: current.realPersonApplies ? nowIso() : null
-  });
-  const next = { ...current, persona };
+  const confirmedAt = nowIso();
+  const imported = current.importedPersonas?.length ? current.importedPersonas : null;
+  const personas = (imported ?? [
+    {
+      personaId: current.persona?.personaId ?? slugId("persona", current.personaLabel || "persona"),
+      label: current.personaLabel,
+      rawInput: current.personaRaw
+    }
+  ]).map((candidate) =>
+    // Confirmation is an App-owned action. Workbook ids remain stable; only
+    // the PersonaVersion id is minted here.
+    confirmManualPersona({
+      id: slugId("persona-version", candidate.personaId),
+      personaId: candidate.personaId,
+      label: candidate.label,
+      rawInput: candidate.rawInput,
+      fields: { roleAndContext: candidate.rawInput.trim() },
+      confirmedAt,
+      confirmedBy: "desktop-user",
+      realPersonApplies: imported ? false : current.realPersonApplies,
+      warningAcknowledgedAt: !imported && current.realPersonApplies ? confirmedAt : null
+    })
+  );
+  const persona = personas[0];
+  const next = {
+    ...current,
+    persona,
+    personas: imported ? personas : undefined,
+    importedPersonas: undefined,
+    batchId: imported ? current.batchId : undefined,
+    sampleCount: imported ? current.sampleCount : 1
+  };
   drafts.set(projectDirectory, next);
   // v0.2 increment 4: auto-save the confirmed version into the reusable
   // Persona library (deduplicated by contentHash; toggleable in the library).
-  try {
-    autoSavePersona(persona, { projectId: current.projectId, projectDirectory: current.projectDirectory });
-  } catch {
-    // A broken library file must never block the draft flow; the UI surfaces
-    // it through the dedicated library channels instead.
+  for (const confirmed of personas) {
+    try {
+      autoSavePersona(confirmed, {
+        projectId: current.projectId,
+        projectDirectory: current.projectDirectory
+      });
+    } catch {
+      // A broken library file must never block the draft flow; the UI surfaces
+      // it through the dedicated library channels instead.
+    }
   }
   return next;
+}
+
+export function selectDraftPersonas(
+  projectDirectory: string,
+  personaVersionIds: string[]
+): DraftState {
+  const current = drafts.get(projectDirectory);
+  if (!current) {
+    throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
+  }
+  const ids = [...new Set(personaVersionIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length < 1 || ids.length > 30) {
+    throw new Error("【Persona】批次必須選擇 1–30 個已確認的 Persona Version。");
+  }
+  const byId = new Map(
+    listPersonas().personas.map((entry) => [entry.personaVersion.id, entry.personaVersion])
+  );
+  const personas = ids.map((id) => {
+    const persona = byId.get(id);
+    if (!persona || persona.status !== "confirmed") {
+      throw new Error(`【Persona】找不到已確認的 Persona Version：${id}`);
+    }
+    return persona;
+  });
+  const first = personas[0];
+  const next: DraftState = {
+    ...current,
+    persona: first,
+    personas,
+    importedPersonas: undefined,
+    personaLabel: first.label,
+    personaRaw: first.rawInput,
+    batchId: personas.length > 1 ? current.batchId || slugId("batch", "library-selection") : undefined,
+    frozenArtifacts: null
+  };
+  drafts.set(projectDirectory, next);
+  return next;
+}
+
+export async function importWorkbookToDraft(
+  projectDirectory: string,
+  workbookPath: string
+): Promise<{
+  ok: true;
+  batchId: string;
+  sourceTitle: string;
+  sourceText: string;
+  questions: string[];
+  questionCount: number;
+  personaCount: number;
+  sampleCount: number;
+  personaLabel: string;
+  personaRaw: string;
+  personas: Array<{ personaId: string; label: string }>;
+}> {
+  const current = drafts.get(projectDirectory);
+  if (!current) {
+    throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
+  }
+
+  const result = await validateWorkbookAtPath(workbookPath);
+  if (!result.ok) {
+    const errText = result.errors.map((e) => `[${e.code}] ${e.message}`).join("; ");
+    throw new Error(`【Workbook 匯入】校驗失敗：${errText}`);
+  }
+
+  const wb = result.workbook;
+  const batch = wb.batches.find((b) => b.rows.some((r) => r.enabled)) ?? wb.batches[0];
+  if (!batch) {
+    throw new Error("【Workbook 匯入】Workbook 未包含任何 Simulation Batch。");
+  }
+
+  const source = wb.sources.find((s) => s.sourceId === batch.sourceId && s.enabled) ?? wb.sources[0];
+  if (!source) {
+    throw new Error("【Workbook 匯入】找不到對應且啟用的 Source。");
+  }
+
+  const qs = wb.questionSets.find((q) => q.questionSetId === batch.questionSetId) ?? wb.questionSets[0];
+  if (!qs) {
+    throw new Error("【Workbook 匯入】找不到對應的 Question Set。");
+  }
+
+  const questions = [...qs.items].sort((a, b) => a.order - b.order).map((i) => i.text);
+  const enabledRowPersonaIds = batch.rows.filter((r) => r.enabled).map((r) => r.personaId);
+  const matchedPersonas = wb.personas.filter((p) => enabledRowPersonaIds.includes(p.personaId) && p.enabled);
+
+  if (matchedPersonas.length === 0) {
+    throw new Error("【Workbook 匯入】Batch 未包含任何已啟用的 Persona。");
+  }
+  if (matchedPersonas.length > 30) {
+    throw new Error("【Workbook 匯入】批次 Persona 數量超過上限（最多 30 位）。");
+  }
+
+  const firstPersona = matchedPersonas[0];
+
+  const next: DraftState = {
+    ...current,
+    title: source.title,
+    sourceText: source.text,
+    sourceId: source.sourceId,
+    questions,
+    persona: null,
+    personaRaw: firstPersona.rawInput,
+    personaLabel: firstPersona.label,
+    personas: undefined,
+    importedPersonas: matchedPersonas.map((p) => ({
+      personaId: p.personaId,
+      label: p.label,
+      rawInput: p.rawInput
+    })),
+    batchId: batch.batchId,
+    sampleCount: batch.sampleCount,
+    frozenArtifacts: null
+  };
+
+  drafts.set(projectDirectory, next);
+  saveLastProjectMemory({ projectDirectory, workbookPath });
+
+  return {
+    ok: true,
+    batchId: batch.batchId,
+    sourceTitle: source.title,
+    sourceText: source.text,
+    questions,
+    questionCount: questions.length,
+    personaCount: matchedPersonas.length,
+    sampleCount: batch.sampleCount,
+    personaLabel: firstPersona.label,
+    personaRaw: firstPersona.rawInput,
+    personas: matchedPersonas.map((p) => ({ personaId: p.personaId, label: p.label }))
+  };
 }
 
 function resolveSourceId(
@@ -237,12 +425,20 @@ function runArtifactExists(projectDirectory: string, runId: string): boolean {
   return Boolean(inspected?.runIds.includes(runId));
 }
 
-function buildPlan(draft: DraftState) {
-  if (!draft.persona) {
-    throw new Error(
-      "【Persona】尚未確認 Persona Version。請到「Persona」頁輸入背景後按「確認 Persona Version」。"
-    );
+function executableSampleCount(value: number | undefined): 1 | 3 {
+  const sampleCount = value ?? 1;
+  if (sampleCount !== 1 && sampleCount !== 3) {
+    throw new Error("【Preflight】目前可執行的樣本數只有 1 或 3；請修改 Workbook 後重新匯入。");
   }
+  return sampleCount;
+}
+
+function buildPlanForPersona(
+  draft: DraftState,
+  persona: PersonaVersion,
+  explicitRunId?: string,
+  explicitReportId?: string
+) {
   const questions = draft.questions.map((item) => item.trim()).filter(Boolean);
   if (!draft.sourceText.trim() || questions.length === 0) {
     throw new Error(
@@ -270,21 +466,24 @@ function buildPlan(draft: DraftState) {
     ...questionCandidate
   };
   const runId =
+    explicitRunId ??
     frozen?.runId ??
     nextNumberedId([...(existing?.runIds ?? []), ...reserved.runIds], `${projectId}-run`);
   const reportId =
+    explicitReportId ??
     frozen?.reportId ??
     nextNumberedId([...(existing?.reportIds ?? []), ...reserved.reportIds], `${projectId}-report`);
+  const sampleCount = executableSampleCount(draft.sampleCount);
   const plan = makeExecutionPlan({
     sourceId,
     sourceText,
-    persona: draft.persona,
+    persona,
     questionSet,
     settings: {
       provider: draft.provider,
       model: draft.model || defaultModelFor(draft.provider),
       endpointClass: PROVIDER_METADATA[draft.provider].endpointClass,
-      sampleCount: 1,
+      sampleCount,
       temperature: null,
       maxOutputTokens: null,
       seed: null
@@ -294,13 +493,163 @@ function buildPlan(draft: DraftState) {
   return { plan, runId, reportId, questionSet, planHashValue: planHash(plan), projectId, sourceId };
 }
 
+function buildPlan(draft: DraftState) {
+  if (!draft.persona) {
+    throw new Error(
+      "【Persona】尚未確認 Persona Version。請到「Persona」頁輸入背景後按「確認 Persona Version」。"
+    );
+  }
+  return buildPlanForPersona(draft, draft.persona);
+}
+
 export function renderDraftPreflight(projectDirectory: string) {
   const draft = drafts.get(projectDirectory);
   if (!draft) {
     throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
   }
+  const personas = draft.personas && draft.personas.length > 1 ? draft.personas : null;
+  if (personas) {
+    const existing = inspectProject(projectDirectory);
+    const reserved = pendingArtifacts(projectDirectory);
+    const existingRunIds = [...(existing?.runIds ?? []), ...reserved.runIds];
+    const existingReportIds = [...(existing?.reportIds ?? []), ...reserved.reportIds];
+    const projectId = existing?.projectId ?? draft.projectId;
+
+    const plans = personas.map((persona) => {
+      const runId = nextNumberedId(existingRunIds, `${projectId}-run`);
+      existingRunIds.push(runId);
+      const reportId = nextNumberedId(existingReportIds, `${projectId}-report`);
+      existingReportIds.push(reportId);
+      const built = buildPlanForPersona(draft, persona, runId, reportId);
+      return {
+        personaId: persona.personaId,
+        label: persona.label,
+        plan: built.plan,
+        runId
+      };
+    });
+
+    return {
+      isBatch: true,
+      ...batchPreflightView({
+        batchId: draft.batchId || slugId("batch", "simulation"),
+        sourceId: resolveSourceId(draft, existing),
+        sourceTitle: draft.title,
+        questionCount: draft.questions.length,
+        sampleCount: executableSampleCount(draft.sampleCount),
+        plans,
+        provider: draft.provider,
+        model: draft.model || defaultModelFor(draft.provider),
+        endpointClass: PROVIDER_METADATA[draft.provider].endpointClass,
+        createdAt: nowIso()
+      })
+    };
+  }
+
   const { plan, runId } = buildPlan(draft);
-  return preflightView(plan, nowIso(), runId);
+  return {
+    isBatch: false,
+    ...preflightView(plan, nowIso(), runId)
+  };
+}
+
+export async function enqueueBatchAndProcess(
+  projectDirectory: string,
+  batchPlanHash: string,
+  acknowledgedDisclaimer: boolean,
+  mode: JobMode
+) {
+  const draft = drafts.get(projectDirectory);
+  if (!draft) {
+    throw new Error("【專案】目前沒有開啟的草稿。");
+  }
+  if (!acknowledgedDisclaimer) {
+    throw new Error("【Preflight】必須確認預測聲明才能排入佇列。");
+  }
+  const personas = draft.personas && draft.personas.length > 0 ? draft.personas : (draft.persona ? [draft.persona] : []);
+  if (personas.length === 0) {
+    throw new Error("【Persona】沒有已確認的 Persona。");
+  }
+
+  const existing = inspectProject(projectDirectory);
+  const reserved = pendingArtifacts(projectDirectory);
+  const existingRunIds = [...(existing?.runIds ?? []), ...reserved.runIds];
+  const existingReportIds = [...(existing?.reportIds ?? []), ...reserved.reportIds];
+  const projectId = existing?.projectId ?? draft.projectId;
+  const batchId = draft.batchId || slugId("batch", "simulation");
+
+  const builtPlans = personas.map((persona) => {
+    const runId = nextNumberedId(existingRunIds, `${projectId}-run`);
+    existingRunIds.push(runId);
+    const reportId = nextNumberedId(existingReportIds, `${projectId}-report`);
+    existingReportIds.push(reportId);
+    const built = buildPlanForPersona(draft, persona, runId, reportId);
+    return { persona, built };
+  });
+
+  const calculatedBatchHash = computeBatchPlanHash(
+    batchId,
+    builtPlans.map((b) => ({ personaId: b.persona.personaId, planHash: b.built.planHashValue }))
+  );
+
+  if (calculatedBatchHash !== batchPlanHash) {
+    throw new Error("【Preflight】批次執行計畫已變更。請重新整理 Preflight 後再送出。");
+  }
+
+  const enqueuedJobs: JobSummary[] = [];
+  for (const item of builtPlans) {
+    const approval = approvePreflight({
+      runId: item.built.runId,
+      plan: item.built.plan,
+      presentedPlanHash: item.built.planHashValue,
+      approvedAt: nowIso(),
+      acknowledgedDisclaimer: true,
+      realPersonReconfirmed: false
+    });
+    const job = appendJob({
+      jobId: slugId("job", `${batchId}-${item.persona.personaId}`),
+      projectDirectory,
+      projectId,
+      runId: item.built.runId,
+      reportId: item.built.reportId,
+      mode,
+      planHash: approval.planHash,
+      approval,
+      status: "queued",
+      createdAt: nowIso(),
+      startedAt: null,
+      completedAt: null,
+      error: null,
+      attempt: 1,
+      result: null,
+      request: {
+        title: draft.title,
+        sourceId: item.built.sourceId,
+        sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
+        personaRaw: item.persona.rawInput,
+        personaLabel: item.persona.label,
+        realPersonApplies: item.persona.review?.realPerson?.applies ?? false,
+        questions: draft.questions.map((q) => q.trim()).filter(Boolean),
+        persona: item.persona,
+        provider: draft.provider,
+        model: draft.model || defaultModelFor(draft.provider),
+        createdAt: draft.createdAt,
+        questionSet: item.built.questionSet,
+        sampleCount: item.built.plan.sampleCount
+      }
+    });
+    enqueuedJobs.push(job);
+  }
+
+  const snapshot = await processQueue(projectDirectory);
+  return {
+    ok: true,
+    batchId,
+    batchPlanHash,
+    queuedCount: enqueuedJobs.length,
+    jobs: listJobs(projectDirectory),
+    snapshot
+  };
 }
 
 let activeJobId: string | null = null;
@@ -377,10 +726,7 @@ function describeStalePreflight(draft: DraftState, presentedPlanHash: string): s
 async function completeRun(
   draft: DraftState,
   approved: ApprovedPlan,
-  result: StructuredResult,
-  rawResponse: unknown,
-  provider: ProviderId,
-  model: string,
+  samples: StoredSampleResult[],
   completedAt = nowIso()
 ) {
   if (activeJobId && isCancelRequested(activeJobId)) {
@@ -408,11 +754,7 @@ async function completeRun(
     planHash: approved.planHashValue,
     runId: approved.runId,
     reportId: approved.reportId,
-    sampleId: approved.plan.sampleIds[0],
-    result,
-    rawResponse,
-    provider,
-    model,
+    samples,
     approval: approved.approval
   });
   return readSnapshot(draft.projectDirectory);
@@ -440,13 +782,19 @@ export async function runMocked(
     sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
     questions: draft.questions.map((item) => item.trim()).filter(Boolean)
   });
+  const completedAt = nowIso();
   return completeRun(
     draft,
     approved,
-    mocked.result,
-    mocked.rawResponse,
-    approved.plan.provider,
-    approved.plan.model
+    approved.plan.sampleIds.map((sampleId) => ({
+      sampleId,
+      result: mocked.result,
+      rawResponse: mocked.rawResponse,
+      provider: approved.plan.provider,
+      model: approved.plan.model,
+      completedAt
+    })),
+    completedAt
   );
 }
 
@@ -478,29 +826,41 @@ export async function runLive(
     throw wrapProviderCallError(provider, new Error("not available"));
   }
   const apiKey = await loadProviderApiKey(provider);
-  let live;
+  if (!apiKey) {
+    throw wrapProviderCallError(provider, new Error("not available"));
+  }
+  const samples: StoredSampleResult[] = [];
   try {
-    live =
-      provider === "openai"
-        ? await liveOpenaiGenerate(approved.plan, { apiKey })
-        : await liveGeminiGenerate(approved.plan, { apiKey });
+    for (const sampleId of approved.plan.sampleIds) {
+      const live =
+        provider === "openai"
+          ? await liveOpenaiGenerate(approved.plan, { apiKey })
+          : await liveGeminiGenerate(approved.plan, { apiKey });
+      markProviderVerified(provider, apiKey);
+      samples.push({
+        sampleId,
+        result: live.result,
+        rawResponse: live.rawResponse,
+        provider: approved.plan.provider,
+        model: approved.plan.model,
+        completedAt: nowIso()
+      });
+    }
   } catch (error) {
     throw wrapProviderCallError(provider, error, apiKey);
   }
-  return completeRun(
-    draft,
-    approved,
-    live.result,
-    live.rawResponse,
-    approved.plan.provider,
-    approved.plan.model
-  );
+  return completeRun(draft, approved, samples, samples[samples.length - 1].completedAt);
 }
 
 export async function credentialStatus(): Promise<{
   providers: Record<
     ProviderId,
-    { available: boolean; source: CredentialSource; fingerprint: string | null }
+    {
+      available: boolean;
+      source: CredentialSource;
+      fingerprint: string | null;
+      verifiedByUse: boolean;
+    }
   >;
   disclaimer: string;
 }> {
@@ -513,12 +873,14 @@ export async function credentialStatus(): Promise<{
       gemini: {
         available: gemini.available,
         source: gemini.source,
-        fingerprint: gemini.fingerprint
+        fingerprint: gemini.fingerprint,
+        verifiedByUse: gemini.verifiedByUse
       },
       openai: {
         available: openai.available,
         source: openai.source,
-        fingerprint: openai.fingerprint
+        fingerprint: openai.fingerprint,
+        verifiedByUse: openai.verifiedByUse
       }
     },
     disclaimer: DISCLAIMER
@@ -541,6 +903,7 @@ function draftFromJob(job: RunJob): DraftState {
     realPersonApplies: job.request.realPersonApplies,
     questions: job.request.questions,
     persona: job.request.persona,
+    sampleCount: job.request.sampleCount,
     provider: job.request.provider,
     model: job.request.model,
     createdAt: job.request.createdAt,
@@ -603,7 +966,8 @@ export function enqueueRun(
       provider: draft.provider,
       model: draft.model || defaultModelFor(draft.provider),
       createdAt: draft.createdAt,
-      questionSet: built.questionSet
+      questionSet: built.questionSet,
+      sampleCount: built.plan.sampleCount
     }
   };
   return appendJob(job);
@@ -702,15 +1066,21 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
       throw new Error("已排入佇列的計畫與原核准內容不相符；拒絕執行。");
     }
     assertCurrentPreflightApproval(built.plan, built.runId, job.approval);
-    let completedResult = job.result;
-    if (!completedResult) {
+    const completedSamples = [...(job.result?.samples ?? [])];
+    while (completedSamples.length < built.plan.sampleIds.length) {
+      if (isCancelRequested(job.jobId)) {
+        throw new Error("Job cancelled");
+      }
+      const sampleId = built.plan.sampleIds[completedSamples.length];
+      let completedSample: StoredSampleResult;
       if (job.mode === "mocked") {
         const mocked = mockGeminiResult({
           sourceId: built.sourceId,
           sourceText: draft.sourceText,
           questions: draft.questions
         });
-        completedResult = {
+        completedSample = {
+          sampleId,
           result: mocked.result,
           rawResponse: mocked.rawResponse,
           provider: built.plan.provider,
@@ -723,16 +1093,21 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
           throw wrapProviderCallError(built.plan.provider, new Error("not available"));
         }
         const apiKey = await loadProviderApiKey(built.plan.provider);
+        if (!apiKey) {
+          throw wrapProviderCallError(built.plan.provider, new Error("not available"));
+        }
         let live;
         try {
           live =
             built.plan.provider === "openai"
               ? await liveOpenaiGenerate(built.plan, { apiKey })
               : await liveGeminiGenerate(built.plan, { apiKey });
+          markProviderVerified(built.plan.provider, apiKey);
         } catch (error) {
           throw wrapProviderCallError(built.plan.provider, error, apiKey);
         }
-        completedResult = {
+        completedSample = {
+          sampleId,
           result: live.result,
           rawResponse: live.rawResponse,
           provider: built.plan.provider,
@@ -740,24 +1115,21 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
           completedAt: nowIso()
         };
       }
-      // Persist the provider response before touching the Project. If Project
-      // publication later fails, retry resumes from this envelope and never
-      // makes a second paid live-provider call.
+      completedSamples.push(completedSample);
+      // Persist every provider response before requesting the next Sample or
+      // touching the Project. Retry resumes only the missing Samples.
       updateJob(job.jobId, {
         status: "partial",
         completedAt: null,
         error: null,
-        result: completedResult
+        result: { samples: completedSamples }
       });
     }
     const snapshot = await completeRun(
       draft,
       { ...built, approval: job.approval },
-      completedResult.result,
-      completedResult.rawResponse,
-      completedResult.provider,
-      completedResult.model,
-      completedResult.completedAt
+      completedSamples,
+      completedSamples[completedSamples.length - 1].completedAt
     );
     if (isCancelRequested(job.jobId)) {
       updateJob(job.jobId, { status: "cancelled", completedAt: nowIso() });
@@ -803,7 +1175,14 @@ export async function processQueue(projectDirectory?: string): Promise<ProjectSn
       if (!next) {
         break;
       }
-      last = await executeJob(next);
+      try {
+        const snapshot = await executeJob(next);
+        if (snapshot) {
+          last = snapshot;
+        }
+      } catch {
+        // executeJob already recorded failed/cancelled; remaining Jobs continue.
+      }
     }
   } finally {
     processingQueue = false;
@@ -817,8 +1196,12 @@ export async function enqueueAndProcess(
   acknowledgedDisclaimer: boolean,
   mode: JobMode
 ): Promise<{ jobs: JobSummary[]; snapshot: ProjectSnapshot | null }> {
-  enqueueRun(projectDirectory, presentedPlanHash, acknowledgedDisclaimer, mode);
+  const enqueued = enqueueRun(projectDirectory, presentedPlanHash, acknowledgedDisclaimer, mode);
   const snapshot = await processQueue(projectDirectory);
+  const completed = getJob(enqueued.jobId);
+  if (completed && (completed.status === "failed" || completed.status === "partial")) {
+    throw new Error(completed.error || "Job 執行失敗");
+  }
   return { jobs: listJobs(projectDirectory), snapshot };
 }
 
@@ -827,6 +1210,10 @@ export async function retryAndProcess(
 ): Promise<{ jobs: JobSummary[]; snapshot: ProjectSnapshot | null }> {
   const job = retryJob(jobId);
   const snapshot = await processQueue(job.projectDirectory);
+  const completed = getJob(job.jobId);
+  if (completed && (completed.status === "failed" || completed.status === "partial")) {
+    throw new Error(completed.error || "Job 執行失敗");
+  }
   return { jobs: listJobs(job.projectDirectory), snapshot };
 }
 

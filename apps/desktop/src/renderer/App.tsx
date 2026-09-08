@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-type Stage = "overview" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
+type Stage = "overview" | "settings" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
 
 type ProviderId = "gemini" | "openai";
 
@@ -8,6 +8,7 @@ type CredentialPresence = {
   available: boolean;
   source: "keychain" | "env" | null;
   fingerprint: string | null;
+  verifiedByUse?: boolean;
 };
 
 type ProviderMetadata = Record<
@@ -30,6 +31,7 @@ type JobSummary = {
 type LibraryEntry = {
   personaVersion: {
     id: string;
+    personaId: string;
     label: string;
     rawInput?: string;
     confirmedAt?: string;
@@ -65,6 +67,7 @@ type WorkbookCheck =
 
 const STAGES: Array<{ id: Stage; label: string }> = [
   { id: "overview", label: "總覽" },
+  { id: "settings", label: "設定" },
   { id: "materials", label: "材料" },
   { id: "personas", label: "Persona" },
   { id: "questions", label: "問題" },
@@ -85,13 +88,15 @@ export function App() {
   const [preflight, setPreflight] = useState<Record<string, unknown> | null>(null);
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState("");
+  const [recoverableNotice, setRecoverableNotice] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderId>("gemini");
   const [model, setModel] = useState<string>("");
   const [customModel, setCustomModel] = useState(false);
   const [providerMetadata, setProviderMetadata] = useState<ProviderMetadata | null>(null);
   const [credentialState, setCredentialState] = useState<Record<ProviderId, CredentialPresence>>({
-    gemini: { available: false, source: null, fingerprint: null },
-    openai: { available: false, source: null, fingerprint: null }
+    gemini: { available: false, source: null, fingerprint: null, verifiedByUse: false },
+    openai: { available: false, source: null, fingerprint: null, verifiedByUse: false }
   });
   const [saveReceipt, setSaveReceipt] = useState<{ provider: ProviderId; fingerprint: string } | null>(null);
   // API keys must never enter React state, because state may be retained by
@@ -99,6 +104,7 @@ export function App() {
   // for the credential IPC call and cleared immediately afterwards.
   const apiKeyInputs = useRef<Partial<Record<ProviderId, HTMLInputElement | null>>>({});
   const [library, setLibrary] = useState<{ settings: { autoSave: boolean }; personas: LibraryEntry[] } | null>(null);
+  const [selectedPersonaVersionIds, setSelectedPersonaVersionIds] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [workbookCheck, setWorkbookCheck] = useState<WorkbookCheck | null>(null);
 
@@ -131,12 +137,14 @@ export function App() {
         gemini: {
           available: creds.providers.gemini.available,
           source: creds.providers.gemini.source,
-          fingerprint: creds.providers.gemini.fingerprint ?? null
+          fingerprint: creds.providers.gemini.fingerprint ?? null,
+          verifiedByUse: Boolean(creds.providers.gemini.verifiedByUse)
         },
         openai: {
           available: creds.providers.openai.available,
           source: creds.providers.openai.source,
-          fingerprint: creds.providers.openai.fingerprint ?? null
+          fingerprint: creds.providers.openai.fingerprint ?? null,
+          verifiedByUse: Boolean(creds.providers.openai.verifiedByUse)
         }
       });
     }
@@ -161,6 +169,51 @@ export function App() {
     }
   }
 
+  async function openProjectAt(path: string, projectTitle = title): Promise<boolean> {
+    const created = await invoke<{
+      openedExisting: boolean;
+      title: string;
+      sourceText: string;
+      personaRaw: string;
+      personaLabel: string;
+      questions: string[];
+      provider?: ProviderId;
+      model?: string;
+    }>("project.create", { projectDirectory: path, title: projectTitle });
+    if (created === null) {
+      setDirectory("");
+      return false;
+    }
+    setDirectory(path);
+    setRecoverableNotice(null);
+    if (created.openedExisting) {
+      setTitle(created.title || projectTitle);
+      setSourceText(created.sourceText);
+      setPersonaRaw(created.personaRaw);
+      setPersonaLabel(created.personaLabel);
+      setQuestions(created.questions.length > 0 ? created.questions : [""]);
+      if (created.provider === "gemini" || created.provider === "openai") {
+        pickProvider(created.provider);
+        if (created.model) {
+          const listed = providerMetadata?.[created.provider].models ?? [];
+          if (listed.includes(created.model)) {
+            setCustomModel(false);
+            setModel(created.model);
+          } else {
+            setCustomModel(true);
+            setModel(created.model);
+          }
+        }
+      }
+    }
+    await refreshJobs(path);
+    const snap = await invoke<Record<string, unknown>>("project.open", { projectDirectory: path });
+    if (snap) {
+      setSnapshot(snap);
+    }
+    return true;
+  }
+
   useEffect(() => {
     void refreshProviderMetadata();
     void refreshCredential();
@@ -175,6 +228,31 @@ export function App() {
       }
       if (result?.snapshot) {
         setSnapshot(result.snapshot);
+      }
+
+      // Check last-project memory safely
+      const last = await invoke<{
+        remembered: { projectDirectory: string; workbookPath?: string } | null;
+        status: "none" | "valid" | "missing" | "invalid";
+        message: string | null;
+      }>("project.getLastProject");
+      if (last?.status === "valid" && last.remembered?.projectDirectory) {
+        const ok = await openProjectAt(last.remembered.projectDirectory);
+        if (ok) {
+          setStatus("已自動復原上次開啟的專案資料夾。");
+          if (last.remembered.workbookPath) {
+            const check = await invoke<WorkbookCheck>("workbook.validate", {
+              path: last.remembered.workbookPath
+            });
+            if (check) {
+              setWorkbookCheck(check);
+            }
+          }
+        }
+      } else if (last?.status === "missing" || last?.status === "invalid") {
+        setRecoverableNotice(
+          last.message || "上次使用的專案目錄已不存在或無效。現有檔案安全未受影響，請選擇其他資料夾。"
+        );
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,6 +273,27 @@ export function App() {
     setStatus(
       `已載入「${entry.personaVersion.label}」到表單；請按「確認 Persona Version」建立新版本。`
     );
+  }
+
+  async function applyLibrarySelection() {
+    if (!directory) {
+      setStatus("【Persona】請先選擇或開啟專案資料夾。");
+      return;
+    }
+    const selected = await invoke<{
+      personaLabel: string;
+      personaRaw: string;
+      personas: unknown[];
+    }>("project.selectPersonas", {
+      projectDirectory: directory,
+      personaVersionIds: selectedPersonaVersionIds
+    });
+    if (!selected) return;
+    setPersonaLabel(selected.personaLabel);
+    setPersonaRaw(selected.personaRaw);
+    setPreflight(null);
+    setDisclaimer(false);
+    setStatus(`已選用 ${selected.personas.length} 個已確認的 Persona Version；請重新產生 Preflight。`);
   }
 
   async function removeLibraryPersona(entry: LibraryEntry) {
@@ -317,9 +416,65 @@ export function App() {
     setWorkbookCheck(result);
     setStatus(
       result.ok
-        ? "Workbook 檢查通過。這不是匯入，也尚未核准執行。"
+        ? "Workbook 檢查通過。可點擊「匯入為專案草稿」建立批次執行計畫。"
         : `【Workbook】檢查未通過：${result.errors.length} 項錯誤。請依下方代碼與欄位位置修正 Excel 後再選一次。`
     );
+  }
+
+  async function importWorkbook() {
+    if (!directory) {
+      setStatus("【Workbook 匯入】請先選擇或開啟專案資料夾。");
+      return;
+    }
+    if (!workbookCheck || !workbookCheck.ok) {
+      setStatus("【Workbook 匯入】請先選擇通過檢查的 Workbook 檔案。");
+      return;
+    }
+    setStatus("");
+    const res = await invoke<{
+      ok: true;
+      batchId: string;
+      sourceTitle: string;
+      sourceText: string;
+      questions: string[];
+      personaCount: number;
+      questionCount: number;
+      sampleCount: number;
+      personaLabel: string;
+      personaRaw: string;
+    }>("workbook.importDraft", {
+      projectDirectory: directory,
+      path: workbookCheck.path
+    });
+    if (!res) return;
+
+    setTitle(res.sourceTitle || title);
+    setSourceText(res.sourceText);
+    setQuestions(res.questions.length > 0 ? res.questions : [""]);
+    setPersonaRaw(res.personaRaw);
+    setPersonaLabel(res.personaLabel);
+    setPreflight(null);
+    setDisclaimer(false);
+    setStatus(
+      `已匯入批次 ${res.batchId}：包含 ${res.personaCount} 位 Persona、${res.questionCount} 題問題（樣本數 ${res.sampleCount}）。請先在 Persona 頁明確確認這批 Persona，之後才會建立 Preflight。`
+    );
+    setStage("personas");
+  }
+
+  async function chooseAndExtractMaterial() {
+    setStatus("");
+    const filePath = await invoke<string>("desktop.chooseMaterialFile");
+    if (!filePath) return;
+    const res = await invoke<{
+      text: string;
+      fileName: string;
+      format: string;
+      characterCount: number;
+    }>("material.extractFile", { path: filePath });
+    if (res?.text) {
+      setSourceText(res.text);
+      setStatus(`已從 ${res.fileName} 抽取 ${res.characterCount} 字並填入材料（格式：${res.format.toUpperCase()}）。`);
+    }
   }
 
   async function chooseDir() {
@@ -328,47 +483,10 @@ export function App() {
     if (!path) {
       return;
     }
-    setDirectory(path);
-    const created = await invoke<{
-      openedExisting: boolean;
-      title: string;
-      sourceText: string;
-      personaRaw: string;
-      personaLabel: string;
-      questions: string[];
-      provider?: ProviderId;
-      model?: string;
-    }>("project.create", { projectDirectory: path, title });
-    if (created === null) {
-      setDirectory("");
-      return;
+    const ok = await openProjectAt(path);
+    if (ok) {
+      setStatus("已開啟專案。新的 Run 會附加到這個資料夾，不會刪除既有內容。");
     }
-    if (created.openedExisting) {
-      setTitle(created.title || title);
-      setSourceText(created.sourceText);
-      setPersonaRaw(created.personaRaw);
-      setPersonaLabel(created.personaLabel);
-      setQuestions(created.questions.length > 0 ? created.questions : [""]);
-      if (created.provider === "gemini" || created.provider === "openai") {
-        pickProvider(created.provider);
-        if (created.model) {
-          const listed = providerMetadata?.[created.provider].models ?? [];
-          if (listed.includes(created.model)) {
-            setCustomModel(false);
-            setModel(created.model);
-          } else {
-            setCustomModel(true);
-            setModel(created.model);
-          }
-        }
-      }
-      const snap = await invoke<Record<string, unknown>>("project.snapshot", { projectDirectory: path });
-      if (snap) {
-        setSnapshot(snap);
-      }
-      setStatus("已開啟既有專案。新的 Run 會附加到這個資料夾，不會刪除既有內容。");
-    }
-    await refreshCredential();
   }
 
   async function confirmPersona() {
@@ -383,6 +501,8 @@ export function App() {
     if ((await invoke<unknown>("project.confirmPersona", { projectDirectory: directory })) === null) {
       return;
     }
+    setPreflight(null);
+    setDisclaimer(false);
     await refreshLibrary();
     setStatus(
       library?.settings.autoSave
@@ -401,6 +521,7 @@ export function App() {
       return;
     }
     setPreflight(view);
+    setDisclaimer(false);
     setStage("preflight");
   }
 
@@ -409,30 +530,66 @@ export function App() {
       setStatus("【Preflight】尚未承認預測聲明。請到「Preflight」頁勾選「我承認這是 AI 模擬，不是真實引言」。");
       return;
     }
-    if (typeof preflight?.planHash !== "string") {
-      setStatus("【Preflight】尚未產生計畫預覽。請到「Preflight」頁按「產生目前計畫預覽」，再回來執行。");
-      return;
-    }
     setStatus("");
     if (!(await persistDraft())) {
       return;
     }
-    const view = await invoke<Record<string, unknown>>("preflight.render", { projectDirectory: directory });
-    if (!view) {
+    if (!preflight) {
+      setStage("preflight");
+      setStatus("【Preflight】尚未產生並檢視計畫。請先在 Preflight 頁產生目前計畫預覽。");
       return;
     }
-    const nextHash = view.planHash;
+
+    if (preflight.isBatch) {
+      const batchHash = preflight.batchPlanHash;
+      if (typeof batchHash !== "string") {
+        setStatus("【Preflight】無法取得批次計畫雜湊。請到「Preflight」頁重新產生預覽。");
+        return;
+      }
+      const next = await invoke<{
+        ok: boolean;
+        queuedCount: number;
+        batchId: string;
+        jobs: JobSummary[];
+        snapshot: Record<string, unknown> | null;
+      }>("queue.enqueueBatch", {
+        projectDirectory: directory,
+        batchPlanHash: batchHash,
+        acknowledgedDisclaimer: true,
+        mode
+      });
+      if (!next) {
+        await refreshJobs();
+        return;
+      }
+      setJobs(next.jobs);
+      if (next.snapshot) {
+        setSnapshot(next.snapshot);
+        setPreflight(null);
+        setDisclaimer(false);
+        if (mode === "live") await refreshCredential();
+        setStage("results");
+        setStatus(
+          mode === "mocked"
+            ? `批次模擬完成（共 ${next.queuedCount} 個 Persona Job）。`
+            : `批次 Live 完成（共 ${next.queuedCount} 個 Persona Job）。`
+        );
+        return;
+      }
+      setStage("queue");
+      setStatus(
+        mode === "mocked"
+          ? `批次模擬佇列已啟動（共 ${next.queuedCount} 個 Persona Job）。`
+          : `批次 Live 佇列已啟動（共 ${next.queuedCount} 個 Persona Job）。`
+      );
+      return;
+    }
+
+    const nextHash = preflight.planHash;
     if (typeof nextHash !== "string") {
       setStatus("【Preflight】無法取得目前計畫。請到「Preflight」頁重新產生預覽。");
       return;
     }
-    if (nextHash !== preflight.planHash && preflightSignature(preflight) !== preflightSignature(view)) {
-      setPreflight(view);
-      setStage("preflight");
-      setStatus("【Preflight】材料、Persona、問題或設定已變更。請在本頁重新檢視計畫後，再到「執行」頁開始。");
-      return;
-    }
-    setPreflight(view);
     const next = await invoke<{ jobs: JobSummary[]; snapshot: Record<string, unknown> | null }>(
       "queue.enqueue",
       {
@@ -449,20 +606,18 @@ export function App() {
     setJobs(next.jobs);
     if (next.snapshot) {
       setSnapshot(next.snapshot);
-      const refreshed = await invoke<Record<string, unknown>>("preflight.render", {
-        projectDirectory: directory
-      });
-      if (refreshed) {
-        setPreflight(refreshed);
-      }
+      setPreflight(null);
+      setDisclaimer(false);
+      if (mode === "live") await refreshCredential();
       setStage("results");
       setStatus(
         mode === "mocked"
-          ? "模擬 Run 完成。已為下一筆準備新的計畫預覽；可再到「執行」按 Live Google Gemini Run。"
-          : "Live Run 完成。已為下一筆準備新的計畫預覽。"
+          ? "模擬 Run 完成。下一筆 Run 需要重新產生並檢視 Preflight。"
+          : "Live Run 完成。下一筆 Run 需要重新產生並檢視 Preflight。"
       );
     }
   }
+
 
   async function cancelQueued(jobId: string) {
     setStatus("");
@@ -507,6 +662,14 @@ export function App() {
           <section className="card">
             <h1>總覽</h1>
             <p>各階段可自由切換。資料只會在 Preflight 頁承認預測聲明並開始執行後，才會送往模型。</p>
+            {recoverableNotice ? (
+              <div className="alert-warning">
+                <div>
+                  <strong>專案復原提醒：</strong> {recoverableNotice}
+                </div>
+                <button onClick={() => void chooseDir()}>選擇其他專案資料夾</button>
+              </div>
+            ) : null}
             <label>
               專案標題
               <input value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -520,20 +683,57 @@ export function App() {
         )}
         {stage === "overview" && (
           <section className="card">
-            <h1>Workbook 檢查</h1>
+            <h1>Workbook 檢查與匯入</h1>
             <p>
-              選擇固定格式的 Excel（.xlsx）。此步驟只檢查內容與安全條件，不會建立專案、不會呼叫模型，也不會把結果當成已核准的執行計畫。
+              選擇固定格式的 Excel（.xlsx）。系統會嚴格檢查 5 個工作表、欄位名稱與驗證規則，並提供一鍵批次匯入（最多支援 30 位 Persona）。
             </p>
             <p>檔案：{workbookCheck?.path || "尚未選擇"}</p>
-            <button className="primary" onClick={() => void chooseWorkbook()}>
-              選擇 Workbook
-            </button>
+            <div className="actions">
+              <button className="primary" onClick={() => void chooseWorkbook()}>
+                選擇 Workbook
+              </button>
+              {workbookCheck?.ok && directory ? (
+                <button onClick={() => void importWorkbook()}>
+                  匯入為專案草稿 (1–30 位 Persona)
+                </button>
+              ) : null}
+            </div>
             {workbookCheck ? <WorkbookCheckReport result={workbookCheck} /> : null}
           </section>
         )}
-        {(stage === "overview" || stage === "queue") && (
+        {stage === "overview" && (
+          <section className="card">
+            <h2>模型憑證狀態</h2>
+            {(["gemini", "openai"] as ProviderId[]).map((target) => {
+              const cred = credentialState[target];
+              return (
+                <p key={target}>
+                  <strong>{providerLabel(target)}</strong>：
+                  {cred.available ? (
+                    <>
+                      {cred.source === "keychain" ? "已安全儲存於系統憑證儲存區" : "使用環境變數"}
+                      {cred.fingerprint ? `（識別碼 ${cred.fingerprint}）` : ""}
+                      {cred.verifiedByUse ? (
+                        <span className="badge badge-verified">已透過即時呼叫驗證</span>
+                      ) : (
+                        <span className="badge badge-unverified">尚未經即時呼叫驗證</span>
+                      )}
+                    </>
+                  ) : (
+                    "未設定"
+                  )}
+                </p>
+              );
+            })}
+            <button onClick={() => setStage("settings")}>前往「設定」管理金鑰</button>
+          </section>
+        )}
+        {stage === "settings" && (
           <section className="card">
             <h1>設定</h1>
+            <p className="muted">
+              統一管理模型服務商憑證。金鑰只會存入系統憑證儲存區（macOS Keychain / Windows Credential Manager），由主程序直接取用；前端介面與專案檔案皆不會留存或回顯金鑰。
+            </p>
             {(["gemini", "openai"] as ProviderId[]).map((target) => {
               const cred = credentialState[target];
               const statusText = !cred.available
@@ -546,6 +746,11 @@ export function App() {
                 <div key={target} className="credential-row">
                   <p>
                     <strong>{providerLabel(target)}</strong>：{statusText}
+                    {cred.verifiedByUse ? (
+                      <span className="badge badge-verified">已透過即時呼叫驗證</span>
+                    ) : (
+                      <span className="badge badge-unverified">尚未經即時呼叫驗證</span>
+                    )}
                   </p>
                   {cred.fingerprint ? (
                     <p className="muted">
@@ -556,7 +761,7 @@ export function App() {
                   )}
                   {receipt ? (
                     <p className="save-receipt">
-                      已安全儲存（識別碼 {receipt.fingerprint}）。這只確認本機寫入成功，不代表 {providerLabel(target)} 已接受這組金鑰。
+                      已安全儲存（識別碼 {receipt.fingerprint}）。這只確認本機寫入成功，不代表 {providerLabel(target)} 已接受這組金鑰。成功完成第一次 Live Run 後將標示為「已驗證」。
                     </p>
                   ) : null}
                   <label>
@@ -579,16 +784,20 @@ export function App() {
                 </div>
               );
             })}
-            <p className="muted">key 只存在系統憑證儲存區中，由主程序讀取；介面與專案檔都不會保存或回顯它。</p>
           </section>
         )}
         {stage === "materials" && (
           <section className="card">
             <h1>材料</h1>
-            <p>貼上要模擬對象閱讀的原始材料（Source）。</p>
+            <p>貼上要模擬對象閱讀的原始材料（Source），或直接從本機檔案載入。</p>
+            <div className="actions">
+              <button onClick={() => void chooseAndExtractMaterial()}>
+                從檔案載入 (TXT / Markdown / DOCX / PDF)
+              </button>
+            </div>
             <label>
               Source 材料
-              <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} />
+              <textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} rows={10} />
             </label>
           </section>
         )}
@@ -624,12 +833,33 @@ export function App() {
             </label>
             <div className="actions">
               <button onClick={() => void importFromProject()}>從專案匯入</button>
+              <button
+                className="primary"
+                disabled={selectedPersonaVersionIds.length < 1 || selectedPersonaVersionIds.length > 30}
+                onClick={() => void applyLibrarySelection()}
+              >
+                選用已勾選 Persona（{selectedPersonaVersionIds.length}）
+              </button>
             </div>
             {library?.personas.length ? (
               <ul className="plain-list library-list">
                 {library.personas.map((entry) => (
                   <li key={entry.personaVersion.id} className="library-item">
                     <div>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={selectedPersonaVersionIds.includes(entry.personaVersion.id)}
+                          onChange={(event) =>
+                            setSelectedPersonaVersionIds((current) =>
+                              event.target.checked
+                                ? [...current, entry.personaVersion.id]
+                                : current.filter((id) => id !== entry.personaVersion.id)
+                            )
+                          }
+                        />
+                        加入批次
+                      </label>
                       <strong>{entry.personaVersion.label || "（未命名）"}</strong>
                       <p className="muted">
                         {entry.personaVersion.confirmedAt
@@ -733,7 +963,7 @@ export function App() {
             </button>
             <p>
               {credentialState[provider].available
-                ? `已偵測到 ${providerLabel(provider)} 憑證（來源：${credentialState[provider].source === "keychain" ? "系統憑證儲存區" : "環境變數"}${credentialState[provider].fingerprint ? `，識別碼 ${credentialState[provider].fingerprint}` : ""}）。可進行 Live Run；這不代表服務已接受金鑰。`
+                ? `已偵測到 ${providerLabel(provider)} 憑證（來源：${credentialState[provider].source === "keychain" ? "系統憑證儲存區" : "環境變數"}${credentialState[provider].fingerprint ? `，識別碼 ${credentialState[provider].fingerprint}` : ""}）。${credentialState[provider].verifiedByUse ? "這組憑證已成功完成過 Live 請求。" : "尚未由成功的 Live 請求驗證。"}`
                 : `未偵測到 ${providerLabel(provider)} 憑證。請在下方「設定」貼上 API key 並按儲存，確認出現「已安全儲存」。`}
             </p>
             <button
@@ -781,21 +1011,55 @@ export function App() {
         {stage === "results" && (
           <section className="card">
             <h1>結果</h1>
-            {snapshot?.result ? (
+            {snapshot?.result || (snapshot?.runs && (snapshot.runs as any[]).length > 0) ? (
               <>
-                {Array.isArray(snapshot.runIds) && (snapshot.runIds as unknown[]).length > 1 ? (
-                  <p className="muted">
-                    此專案共 {(snapshot.runIds as unknown[]).length} 次 Run，以下為最新一次（{String(snapshot.runId ?? "")}）。
-                  </p>
+                {(snapshot.runs as any[] | undefined)?.length ? (
+                  <div>
+                    <h3>Persona 模擬結果切換</h3>
+                    <div className="persona-tab-group">
+                      {(snapshot.runs as any[]).map((r) => {
+                        const isCurrent = selectedRunId ? r.runId === selectedRunId : r.runId === snapshot.runId;
+                        return (
+                          <button
+                            key={r.runId}
+                            className={isCurrent ? "active" : ""}
+                            onClick={() => setSelectedRunId(r.runId)}
+                          >
+                            {r.personaLabel} ({r.runId})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : null}
-                <h2>Direct Reaction</h2>
-                <p>{String((snapshot.result as { directReaction?: string }).directReaction ?? "")}</p>
-                <h2>Persona Recommendations</h2>
-                <pre>{JSON.stringify((snapshot.result as { personaRecommendations?: string[] }).personaRecommendations, null, 2)}</pre>
-                <h2>System Suggestions</h2>
-                <pre>{JSON.stringify((snapshot.result as { systemSuggestions?: string[] }).systemSuggestions, null, 2)}</pre>
-                <h2>原始回應</h2>
-                <pre>{JSON.stringify(snapshot.rawResponse, null, 2)}</pre>
+                {(() => {
+                  const runs = (snapshot.runs as any[]) ?? [];
+                  const active = runs.find((r) => r.runId === selectedRunId) ?? runs[runs.length - 1] ?? snapshot;
+                  const res = (active.result as Record<string, any>) ?? {};
+                  const stability = active.stabilityComparison as Record<string, any> | null;
+
+                  return (
+                    <>
+                      <p className="muted">
+                        此專案共 {(snapshot.runIds as unknown[] ?? []).length || runs.length} 次 Run，目前檢視：{active.runId}（{active.personaLabel || "未命名"}）
+                      </p>
+                      {stability ? (
+                        <div className="stability-card">
+                          <h3>多樣本穩定度比較 (Multi-Sample Stability)</h3>
+                          <pre>{JSON.stringify(stability, null, 2)}</pre>
+                        </div>
+                      ) : null}
+                      <h2>Direct Reaction</h2>
+                      <p>{String(res.directReaction ?? "")}</p>
+                      <h2>Persona Recommendations</h2>
+                      <pre>{JSON.stringify(res.personaRecommendations, null, 2)}</pre>
+                      <h2>System Suggestions</h2>
+                      <pre>{JSON.stringify(res.systemSuggestions, null, 2)}</pre>
+                      <h2>原始回應</h2>
+                      <pre>{JSON.stringify(active.rawResponse, null, 2)}</pre>
+                    </>
+                  );
+                })()}
                 <h2>報告（Markdown）</h2>
                 <pre>{String(snapshot.reportMarkdown ?? "")}</pre>
               </>
@@ -808,21 +1072,6 @@ export function App() {
       </main>
     </div>
   );
-}
-
-function preflightSignature(data: Record<string, unknown> | null): string {
-  if (!data) {
-    return "";
-  }
-  const outbound = data.outbound as Record<string, unknown> | undefined;
-  const destination = data.destination as Record<string, unknown> | undefined;
-  return JSON.stringify({
-    source: outbound?.source,
-    personaVersion: outbound?.personaVersion,
-    promptSections: outbound?.promptSections,
-    destination,
-    sampleCount: data.sampleCount
-  });
 }
 
 function statusBannerClass(status: string): string {
@@ -954,6 +1203,74 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function PreflightReport({ data }: { data: Record<string, unknown> }) {
+  if (data.isBatch) {
+    const matrix = data.matrix as {
+      personaCount: number;
+      questionCount: number;
+      sampleCount: number;
+      totalRequests: number;
+    };
+    const estimate = data.estimate as {
+      approximateInputTokensPerRequest: number;
+      approximateTotalInputTokens: number;
+    };
+    const personas =
+      (data.personas as Array<{ personaId: string; label: string; planHash: string; runId: string }>) ?? [];
+    const destination = data.destination as { provider: string; model: string } | undefined;
+    const warnings = (data.warnings as string[] | undefined) ?? [];
+
+    return (
+      <div className="preflight-report">
+        <div className="batch-summary">
+          <h2>批次預覽總覽 (Batch: {String(data.batchId)})</h2>
+          <div className="preflight-meta">
+            <Row
+              label="批次規模"
+              value={`共 ${matrix.personaCount} 位 Persona · ${matrix.questionCount} 題問題 · 樣本數 ${matrix.sampleCount}`}
+            />
+            <Row label="總規劃請求數" value={`${matrix.totalRequests} 次請求`} />
+            <Row
+              label="規模估算"
+              value={`約 ${estimate.approximateInputTokensPerRequest} tokens／請求，總計約 ${estimate.approximateTotalInputTokens} tokens（字數推估，非計費依據）`}
+            />
+            <Row label="目的地" value={destination ? `${destination.provider} · ${destination.model}` : ""} />
+            <Row label="批次計畫雜湊" value={String(data.batchPlanHash ?? "").slice(0, 16) + "..."} />
+          </div>
+        </div>
+
+        {warnings.length > 0 ? (
+          <Section title="注意事項">
+            <ul className="plain-list">
+              {warnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+
+        <Section title={`包含 Persona 清單 (${personas.length} 位)`}>
+          <div className="batch-grid">
+            {personas.map((p) => (
+              <div key={p.personaId} className="batch-card">
+                <strong>{p.label}</strong>
+                <p className="muted">ID: {p.personaId}</p>
+                <p className="muted">Run: {p.runId}</p>
+                <p className="muted">Hash: {p.planHash.slice(0, 8)}...</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <details className="advanced">
+          <summary>進階：完整原始批次預覽（JSON）</summary>
+          <pre>{JSON.stringify(data, null, 2)}</pre>
+        </details>
+
+        <div className="disclaimer-banner">{String(data.predictionDisclaimer ?? "")}</div>
+      </div>
+    );
+  }
+
   const outbound = data.outbound as Record<string, any> | undefined;
   const destination = data.destination as Record<string, any> | undefined;
   const estimate = data.estimate as Record<string, any> | undefined;

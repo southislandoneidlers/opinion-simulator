@@ -17,14 +17,23 @@ against the tracked accepted-template fixture and hostile in-memory variants.
 They cover 1-Persona and 30-Persona batches, 31-Persona rejection, literal
 cell types, duplicate sheets, unlinked table parts, supplementary Unicode
 character references, and zero filesystem mutation. Desktop IPC tests cover
-`desktop.chooseWorkbook` and `workbook.validate`: golden-template mapping,
+`desktop.chooseWorkbook`, `workbook.validate`, and `workbook.importDraft`:
+golden-template mapping,
 renderer-supplied bytes rejection, empty/wrong-extension/oversized files,
-missing paths, and zero Project/Workbook mutation. Credential-status responses
-include a one-way fingerprint and never the key. Queue tests cover a consumed
-Preflight hash after a mocked Run (clear rejection) and a refreshed hash for
-the next Run.
+missing paths, zero Project/Workbook mutation, preserved Workbook Persona ids,
+and explicit confirmation before Persona-library or Preflight use. Credential
+status includes a one-way fingerprint and fingerprint-bound `verifiedByUse`,
+never the key. Queue tests cover stale Preflight rejection, surfaced single-Job
+failures while batch processing continues, three-Sample resume/persistence,
+and exact-text Stability Comparison. Material IPC rejects PDF streams whose
+decompressed size exceeds the bounded limit.
 
 ## 中文閱讀摘要
+
+下一版新增驗收範圍見 [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)：
+OpenRouter transport／舊資料相容、同批同頁比較、聲明與 plan approval 分離、
+問題庫持久保存、並行送出防重及可見狀態。涉及畫面的需求須有 Renderer／GUI
+行為證據；2026-09-07 使用者「正常運作」回報不等於這些尚未實作的驗收已通過。
 
 這些測試不是在測「Excel 能不能打開」，而是在測系統會不會把不安全或格式錯誤的
 Workbook 誤當成可匯入資料。測試會確認合法的範本能讀出兩位 Persona，也會刻意

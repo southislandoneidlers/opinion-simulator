@@ -96,11 +96,16 @@ function writeRun(output: string, overrides: {
     planHash: planHash(plan),
     runId,
     reportId: overrides.reportId ?? "report-desktop-001",
-    sampleId: plan.sampleIds[0],
-    result,
-    rawResponse: overrides.rawResponse ?? rawResponse,
-    provider: "gemini",
-    model: "gemini-2.0-flash",
+    samples: [
+      {
+        sampleId: plan.sampleIds[0],
+        result,
+        rawResponse: overrides.rawResponse ?? rawResponse,
+        provider: "gemini",
+        model: "gemini-2.0-flash",
+        completedAt: overrides.completedAt ?? "2026-08-24T07:01:00Z"
+      }
+    ],
     approval: {
       schemaVersion: "0.0",
       runId,

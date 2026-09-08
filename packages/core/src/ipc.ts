@@ -6,11 +6,13 @@ export const IPC_CHANNELS = [
   "project.snapshot",
   "project.saveDraft",
   "project.confirmPersona",
+  "project.selectPersonas",
   "preflight.render",
   "run.mocked",
   "run.liveGemini",
   "run.liveOpenai",
   "queue.enqueue",
+  "queue.enqueueBatch",
   "queue.list",
   "queue.cancel",
   "queue.retry",
@@ -24,7 +26,11 @@ export const IPC_CHANNELS = [
   "persona.library.importFromProject",
   "desktop.chooseDirectory",
   "desktop.chooseWorkbook",
-  "workbook.validate"
+  "workbook.validate",
+  "project.getLastProject",
+  "workbook.importDraft",
+  "desktop.chooseMaterialFile",
+  "material.extractFile"
 ] as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[number];
@@ -35,7 +41,8 @@ export const FORBIDDEN_IPC_KEY =
 // Published measurement metadata may mention tokens without carrying a credential.
 // Keep this exact-name allow-list narrow so unknown credential-shaped keys still fail closed.
 const PUBLISHED_NON_CREDENTIAL_IPC_KEYS = new Set([
-  "approximateInputTokensPerRequest"
+  "approximateInputTokensPerRequest",
+  "approximateTotalInputTokens"
 ]);
 
 export function isIpcChannel(value: string): value is IpcChannel {

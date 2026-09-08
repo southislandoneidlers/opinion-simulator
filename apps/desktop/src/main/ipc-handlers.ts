@@ -14,6 +14,8 @@ import {
   confirmDraftPersona,
   credentialStatus,
   enqueueAndProcess,
+  enqueueBatchAndProcess,
+  importWorkbookToDraft,
   listQueuedJobs,
   openOrCreateDraft,
   openSnapshot,
@@ -23,13 +25,17 @@ import {
   retryAndProcess,
   runLive,
   runMocked,
-  saveDraft
+  saveDraft,
+  selectDraftPersonas
 } from "./session";
+import { inspectLastProjectMemory } from "./last-project";
 import { validateWorkbookAtPath } from "./workbook-file";
+import { extractMaterialFromFile } from "./extract-material";
 
 export type IpcDependencies = {
   chooseDirectory: () => Promise<string | null>;
   chooseWorkbook: () => Promise<string | null>;
+  chooseMaterialFile: () => Promise<string | null>;
 };
 
 export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHandler> {
@@ -66,6 +72,12 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
     "project.snapshot": (payload) => openSnapshot(String(payload.projectDirectory ?? "")),
     "project.saveDraft": (payload) => saveDraft(payload as never),
     "project.confirmPersona": (payload) => confirmDraftPersona(String(payload.projectDirectory ?? "")),
+    "project.selectPersonas": (payload) => {
+      const ids = Array.isArray(payload.personaVersionIds)
+        ? payload.personaVersionIds.map((id) => String(id))
+        : [];
+      return selectDraftPersonas(String(payload.projectDirectory ?? ""), ids);
+    },
     "preflight.render": (payload) => renderDraftPreflight(String(payload.projectDirectory ?? "")),
     "run.mocked": (payload) =>
       runMocked(
@@ -94,6 +106,17 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
       return enqueueAndProcess(
         String(payload.projectDirectory ?? ""),
         String(payload.planHash ?? ""),
+        Boolean(payload.acknowledgedDisclaimer),
+        payload.mode
+      );
+    },
+    "queue.enqueueBatch": (payload) => {
+      if (payload.mode !== "live" && payload.mode !== "mocked") {
+        throw new Error("不支援的執行模式");
+      }
+      return enqueueBatchAndProcess(
+        String(payload.projectDirectory ?? ""),
+        String(payload.batchPlanHash ?? ""),
         Boolean(payload.acknowledgedDisclaimer),
         payload.mode
       );
@@ -131,6 +154,26 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
         throw new Error("請選擇 Workbook 檔案");
       }
       return validateWorkbookAtPath(payload.path);
+    },
+    "project.getLastProject": () => inspectLastProjectMemory(),
+    "workbook.importDraft": (payload) => {
+      const projectDirectory = String(payload.projectDirectory ?? "");
+      const path = String(payload.path ?? "");
+      if (!projectDirectory.trim()) {
+        throw new Error("請先選擇或開啟專案資料夾");
+      }
+      if (!path.trim()) {
+        throw new Error("請先選擇 Workbook 檔案");
+      }
+      return importWorkbookToDraft(projectDirectory, path);
+    },
+    "desktop.chooseMaterialFile": () => deps.chooseMaterialFile(),
+    "material.extractFile": (payload) => {
+      const path = String(payload.path ?? "");
+      if (!path.trim()) {
+        throw new Error("請先選擇材料檔案");
+      }
+      return extractMaterialFromFile(path);
     }
   };
 }

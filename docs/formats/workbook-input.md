@@ -1,10 +1,9 @@
 # Workbook input and management format
 
 Status: accepted v0.3 usability baseline on 2026-08-30; importer specification
-revised 2026-08-31 after user review, including removal of the sample-count
-executability warning. `validateWorkbook` is implemented in core. Desktop
-Main/IPC can choose a `.xlsx` path and return a validation result; last-Project
-memory, draft import, Preflight, and queue wiring remain pending.
+revised 2026-08-31 after user review. `validateWorkbook`, Desktop draft import,
+last-Project memory, explicit Persona confirmation, batch Preflight, and queue
+wiring are implemented in the working tree as of 2026-09-03.
 
 ## Role
 
@@ -476,20 +475,19 @@ Required cases:
 
 ## Out of scope for this specification
 
-- Last-Project / Workbook path memory and startup recovery
-- Filling `DraftState`, confirming Personas, or creating Runs from a validated
-  Workbook
 - Writing or rewriting a Project
 - Expanding `ExecutionPlan.sampleCount` beyond `1 \| 3`
-- File extraction (PDF / DOCX / TXT / Markdown)
-- Running the 1–30 Persona Preflight matrix and queue (v0.3 increment 4)
 - Making `.xlsx` the sole canonical artifact
 - A new `@opinion-simulator/workbook` package
 
 ## Compatibility and implementation status
 
-Existing open-directory Projects remain valid and must not be rewritten. The
-read-only `validateWorkbook` in `@opinion-simulator/core`, its deterministic
-fixtures, and the Desktop `desktop.chooseWorkbook` / `workbook.validate` IPC
-seams are implemented. A successful check is not an import and not a Preflight
-approval. Last-Project memory and multi-Persona execution remain pending.
+Existing open-directory Projects remain valid and must not be rewritten.
+`validateWorkbook` in `@opinion-simulator/core`, its deterministic fixtures,
+and the Desktop choose/validate/import IPC seams are implemented. A successful
+check is not an import; an import is not Persona confirmation; and confirmation
+is not Preflight approval. The App preserves Workbook `personaId` values,
+mints Persona Version ids only on explicit confirmation, and binds execution
+to the complete displayed batch plan hash. Workbook sample counts other than
+1 or 3 remain valid imported data but fail closed at executable Preflight until
+`ExecutionPlan.sampleCount` is expanded.
