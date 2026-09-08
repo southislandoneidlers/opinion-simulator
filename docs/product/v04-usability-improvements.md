@@ -1,7 +1,7 @@
 # v0.4 使用回饋改進規格
 
 狀態：2026-09-07 使用者確認五項改進方向。
-2026-09-08：增量 1–3 已實作（送出防重、聲明分離、同頁比較）；增量 4–5 尚未實作。
+2026-09-08：增量 1–4 已實作（送出防重、聲明分離、同頁比較、問題庫）；增量 5 尚未實作。
 使用者回報目前實測正常運作，但沒有提供完整測試矩陣；不據此宣告跨平台、
 所有 provider 或所有 v0.3 exit criteria 均已驗收。
 
@@ -115,6 +115,15 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 - 驗收：單題／整組保存、重啟搜尋載入、追加／取代、順序與空白／超限檢查、
   庫項目變更不影響舊 Run、儲存失敗有明顯且可恢復的提示。
 
+### 實作狀態（2026-09-08）
+
+- Main 以 `question-library.json` 存在 app-data。IPC：`question.library.list`、
+  `save`、`remove`、`apply`（`append` 或 `replace`）。
+- 空白名稱／題目、超過 50 題或單題 4,000 字會拒絕保存或載入。
+- 載入寫入目前草稿副本；改庫不改已寫入 Project 的 Question Set。
+- 自動測試覆蓋保存／搜尋／更新／移除、追加／取代、超限、舊 Run 不受影響。
+  尚未做人工 GUI walkthrough。
+
 ## 5. 送出提示與防止重複送出
 
 - 按下送出立即在按鈕附近或固定可見區顯示「送出中」，同時鎖定重複送出。
@@ -147,7 +156,7 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 ## 實作順序與驗證入口
 
 建議順序：送出防重與明顯狀態 → Preflight 聲明分離 → 批次同頁比較 → 問題庫
-→ OpenRouter 遷移。增量 1–3 已完成。下一個增量是本機問題庫。
+→ OpenRouter 遷移。增量 1–4 已完成。下一個增量是 OpenRouter 遷移。
 
 沿用公開 IPC／session／queue、provider adapter 及 Project 讀寫 seam；
 互動需求須增加 Renderer 行為驗證與人工 walkthrough，不能僅靠 Main 測試宣告完成。
@@ -156,6 +165,6 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ## 範圍外
 
-2026-09-07 記錄規格時未實作功能。增量 1–3 已於 2026-09-08 實作，見第 5、3、2 節。
+2026-09-07 記錄規格時未實作功能。增量 1–4 已於 2026-09-08 實作。
 問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
 OpenRouter 遷移不包含任意自訂 API gateway。既有 v0.4 匯出等項目不因本文件被取消。

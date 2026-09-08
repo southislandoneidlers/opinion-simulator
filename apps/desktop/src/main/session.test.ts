@@ -21,12 +21,18 @@ import {
   retryJob,
   runMocked,
   saveDraft,
-  selectDraftPersonas
+  selectDraftPersonas,
+  applyQuestionSetFromLibrary
 } from "./session";
 import { confirmManualPersona } from "@opinion-simulator/core";
 import { addPersona, configureLibraryDirectory, listPersonas } from "./persona-library";
 import { configureLastProjectDirectory } from "./last-project";
 import { configureQueueDirectory, loadQueue, saveQueue } from "./run-queue";
+import {
+  configureQuestionLibraryDirectory,
+  saveQuestionLibraryEntry
+} from "./question-library";
+import { readSnapshot } from "@opinion-simulator/project-store";
 
 const GOLDEN_WORKBOOK = join(
   __dirname,
@@ -35,6 +41,7 @@ const GOLDEN_WORKBOOK = join(
 
 function configureSessionStores(): void {
   configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-persona-lib-session-")));
+  configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-question-lib-session-")));
   configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-run-queue-session-")));
   configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-last-project-session-")));
 }
@@ -586,5 +593,42 @@ describe("workbook draft import", () => {
     expect(second.snapshot?.executionBatches[1]?.executionBatchId).toBe("sub-compare-second");
     expect(second.snapshot?.executionBatches[0]?.runIds).toEqual(first.snapshot?.executionBatches[0]?.runIds);
     expect(second.snapshot?.unbatchedRuns).toEqual([]);
+  });
+});
+
+describe("question library draft apply", () => {
+  beforeEach(() => {
+    configureSessionStores();
+  });
+
+  it("copies library questions into the draft and does not rewrite a completed Run", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-qlib-"));
+    prepareDraft(projectDirectory);
+    const saved = saveQuestionLibraryEntry({
+      name: "加一題",
+      questions: ["還缺什麼資訊？"]
+    });
+    const appended = applyQuestionSetFromLibrary(projectDirectory, saved.entry.id, "append");
+    expect(appended.questions).toEqual([
+      "你會支持這項計畫嗎？",
+      "推動時最大的阻力是什麼？",
+      "還缺什麼資訊？"
+    ]);
+    const snapshot = await enqueueAndProcess(
+      projectDirectory,
+      currentPlanHash(projectDirectory),
+      true,
+      "mocked"
+    );
+    expect(snapshot.snapshot?.questions).toEqual(appended.questions);
+    saveQuestionLibraryEntry({
+      id: saved.entry.id,
+      name: "加一題",
+      questions: ["庫已改寫。"]
+    });
+    expect(readSnapshot(projectDirectory).questions).toEqual(appended.questions);
+    const replaced = applyQuestionSetFromLibrary(projectDirectory, saved.entry.id, "replace");
+    expect(replaced.questions).toEqual(["庫已改寫。"]);
+    expect(readSnapshot(projectDirectory).questions).toEqual(appended.questions);
   });
 });

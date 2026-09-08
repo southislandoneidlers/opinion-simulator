@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { registerIpc } from "./ipc";
 import { configureLastProjectDirectory } from "./last-project";
 import { configureLibraryDirectory } from "./persona-library";
+import { configureQuestionLibraryDirectory } from "./question-library";
 import { configureQueueDirectory } from "./run-queue";
 
 function createWindow(): void {
@@ -37,6 +38,7 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   // v0.2 increment 4–6 & v0.3 increment 1: Persona library, Run queue, and last project live in Electron userData.
   configureLibraryDirectory(app.getPath("userData"));
+  configureQuestionLibraryDirectory(app.getPath("userData"));
   configureQueueDirectory(app.getPath("userData"));
   configureLastProjectDirectory(app.getPath("userData"));
   registerIpc();

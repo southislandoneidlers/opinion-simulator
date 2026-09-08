@@ -24,8 +24,8 @@
   denied navigation, IPC allow-list with credential-shaped key rejection on
   both request and response. `credential.status` returns availability, storage
   source, and a short one-way fingerprint, never the key. The reusable Persona
-  library and the persistent Run queue live in Electron userData
-  (`persona-library.json`, `run-queue.json`). The queue file may include a
+  library, question library, and persistent Run queue live in Electron userData
+  (`persona-library.json`, `question-library.json`, `run-queue.json`). The queue file may include a
   `submissions` array keyed by `submissionId`; duplicate enqueue IPC returns
   the same Jobs. Legacy queue files without `submissions` still load.
   Confirmed Persona Versions are copied into drafts.

@@ -4,9 +4,9 @@ Freely navigable stages; gates enforce safety, not navigation order.
 
 Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
 defines the confirmed 2026-09-07 changes. Visible submission status,
-Main-side duplicate-submit prevention, session disclaimer retention, and
-same-page batch comparison are implemented. Question reuse and OpenRouter
-remain unimplemented.
+Main-side duplicate-submit prevention, session disclaimer retention,
+same-page batch comparison, and a local question library are implemented.
+OpenRouter remains unimplemented.
 
 Stages:
 
@@ -82,3 +82,10 @@ Stages:
   answers aligned by question. Extra detail expands in place.
 - A new submit of the same material is a new batch. Historical Runs without a
   recorded batch show 「舊資料未記錄批次」 and are not regrouped by guesswork.
+
+## Implemented v0.4 increment 4 workspace behavior
+
+- The Questions stage has a named question library. Users can save the current
+  list, search, append or replace into the draft, edit, and remove entries.
+- Library files live in app-data. Loading copies text into the draft; later
+  library edits do not change completed Runs.

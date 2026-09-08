@@ -42,6 +42,10 @@ import {
 import { stalePreflightMessage, wrapProviderCallError } from "./user-messages";
 import { autoSavePersona, listPersonas } from "./persona-library";
 import { saveLastProjectMemory } from "./last-project";
+import {
+  applyQuestionLibraryEntry,
+  type QuestionLibraryApplyMode
+} from "./question-library";
 import { validateWorkbookAtPath } from "./workbook-file";
 import {
   appendJob,
@@ -248,6 +252,19 @@ export function saveDraft(input: Partial<DraftState> & { projectDirectory: strin
   };
   drafts.set(input.projectDirectory, next);
   return next;
+}
+
+export function applyQuestionSetFromLibrary(
+  projectDirectory: string,
+  entryId: string,
+  mode: QuestionLibraryApplyMode
+): DraftState {
+  const current = drafts.get(projectDirectory);
+  if (!current) {
+    throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
+  }
+  const questions = applyQuestionLibraryEntry(entryId, current.questions, mode);
+  return saveDraft({ projectDirectory, questions });
 }
 
 export function confirmDraftPersona(projectDirectory: string): DraftState {

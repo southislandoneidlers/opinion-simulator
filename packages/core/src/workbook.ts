@@ -59,7 +59,7 @@ const MAX_ZIP_MEMBERS = 64;
 
 const CAP_TITLE_LABEL = 200;
 const CAP_PERSONA_RAW = 20000;
-const CAP_QUESTION_TEXT = 4000;
+export const CAP_QUESTION_TEXT = 4000;
 const CAP_SOURCE_TEXT = 100000;
 const CAP_NOTE = 1000;
 const CAP_TEXT_BUDGET = 400000;
@@ -69,7 +69,7 @@ const CAP_OCCUPIED_SOURCES = 100;
 const CAP_OCCUPIED_QUESTIONS = 100;
 const CAP_OCCUPIED_BATCH_ROWS = 100;
 const CAP_TABLE_DATA_ROWS = 100;
-const CAP_QUESTIONS_PER_SET = 50;
+export const CAP_QUESTIONS_PER_SET = 50;
 const CAP_DISTINCT_BATCHES = 20;
 
 const REQUIRED_SHEETS = ["使用說明", "Persona", "問題集", "材料", "執行清單"] as const;

@@ -10,6 +10,7 @@ import {
   setAutoSave
 } from "./persona-library";
 import {
+  applyQuestionSetFromLibrary,
   cancelJob,
   confirmDraftPersona,
   credentialStatus,
@@ -30,6 +31,11 @@ import {
   saveDraft,
   selectDraftPersonas
 } from "./session";
+import {
+  removeQuestionLibraryEntry,
+  saveQuestionLibraryEntry,
+  searchQuestionLibrary
+} from "./question-library";
 import { inspectLastProjectMemory } from "./last-project";
 import { validateWorkbookAtPath } from "./workbook-file";
 import { extractMaterialFromFile } from "./extract-material";
@@ -152,6 +158,25 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
     "persona.library.list": () => listPersonas(),
     "persona.library.setAutosave": (payload) => setAutoSave(Boolean(payload.enabled)),
     "persona.library.remove": (payload) => removePersona(String(payload.personaVersionId ?? "")),
+    "question.library.list": (payload) => searchQuestionLibrary(String(payload.query ?? "")),
+    "question.library.save": (payload) =>
+      saveQuestionLibraryEntry({
+        id: payload.id ? String(payload.id) : undefined,
+        name: String(payload.name ?? ""),
+        questions: Array.isArray(payload.questions) ? payload.questions.map((item) => String(item)) : []
+      }),
+    "question.library.remove": (payload) => removeQuestionLibraryEntry(String(payload.id ?? "")),
+    "question.library.apply": (payload) => {
+      const mode = payload.mode;
+      if (mode !== "append" && mode !== "replace") {
+        throw new Error("【問題庫】請選擇追加到目前問題，或取代目前問題。");
+      }
+      return applyQuestionSetFromLibrary(
+        String(payload.projectDirectory ?? ""),
+        String(payload.id ?? ""),
+        mode
+      );
+    },
     "persona.library.importFromProject": (payload) => {
       const projectDirectory = String(payload.projectDirectory ?? "");
       const snapshot = readSnapshot(projectDirectory);

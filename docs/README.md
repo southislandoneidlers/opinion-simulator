@@ -14,7 +14,7 @@ document for the question at hand instead of copying its content elsewhere.
   scope, implementation and testing decisions. *(reconstructed summary)*
 - [Roadmap](roadmap.md) — ordered v0.0 through v2 delivery boundaries.
 - [v0.4 使用回饋改進規格](product/v04-usability-improvements.md) — 2026-09-07
-  五項已確認改進；增量 1–3 已於 2026-09-08 實作，其餘尚未實作。
+  五項已確認改進；增量 1–4 已於 2026-09-08 實作，OpenRouter 遷移尚未實作。
 - [Workspace UX](ux/workspace.md) — freely navigable staged workflow and gates.
   *(partially reconstructed)*
 
@@ -39,6 +39,7 @@ document for the question at hand instead of copying its content elsewhere.
   execute as independent append-only Runs.
 - [Persona schema](formats/persona-schema.md)
 - [Persona library](formats/persona-library.md) — app-data reuse cache of confirmed Persona Versions
+- [Question library](formats/question-library.md) — app-data reuse cache of named questions and question sets
 - [Run record](formats/run-record.md)
 - Machine-readable v0.0 JSON Schemas live under [`../schemas/v0.0/`](../schemas/v0.0/)
   and survived intact; they remain authoritative over prose summaries.

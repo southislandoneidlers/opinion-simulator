@@ -126,6 +126,12 @@ export function App() {
   // for the credential IPC call and cleared immediately afterwards.
   const apiKeyInputs = useRef<Partial<Record<ProviderId, HTMLInputElement | null>>>({});
   const [library, setLibrary] = useState<{ settings: { autoSave: boolean }; personas: LibraryEntry[] } | null>(null);
+  const [questionLibrary, setQuestionLibrary] = useState<{
+    entries: Array<{ id: string; name: string; questions: string[] }>;
+  } | null>(null);
+  const [questionLibraryQuery, setQuestionLibraryQuery] = useState("");
+  const [questionLibraryName, setQuestionLibraryName] = useState("");
+  const [editingQuestionLibraryId, setEditingQuestionLibraryId] = useState<string | null>(null);
   const [selectedPersonaVersionIds, setSelectedPersonaVersionIds] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [workbookCheck, setWorkbookCheck] = useState<WorkbookCheck | null>(null);
@@ -248,6 +254,7 @@ export function App() {
     void refreshProviderMetadata();
     void refreshCredential();
     void refreshLibrary();
+    void refreshQuestionLibrary();
     void (async () => {
       const result = await invoke<{ jobs: JobSummary[]; snapshot: Record<string, unknown> | null }>(
         "queue.resumeMissing",
@@ -295,6 +302,63 @@ export function App() {
     if (lib) {
       setLibrary(lib);
     }
+  }
+
+  async function refreshQuestionLibrary(query = questionLibraryQuery) {
+    const listed = await invoke<{
+      entries: Array<{ id: string; name: string; questions: string[] }>;
+    }>("question.library.list", { query });
+    if (listed?.entries) {
+      setQuestionLibrary(listed);
+    }
+  }
+
+  async function saveCurrentQuestionsToLibrary() {
+    setStatus("");
+    const result = await invoke<{ entry: { name: string } }>("question.library.save", {
+      id: editingQuestionLibraryId ?? undefined,
+      name: questionLibraryName,
+      questions
+    });
+    if (!result) {
+      return;
+    }
+    setEditingQuestionLibraryId(null);
+    setQuestionLibraryName("");
+    await refreshQuestionLibrary();
+    setStatus(`問題庫已保存「${result.entry.name}」。`);
+  }
+
+  async function applyQuestionLibrary(id: string, mode: "append" | "replace") {
+    if (!directory) {
+      setStatus("【專案】請先選擇或開啟專案資料夾。");
+      return;
+    }
+    setStatus("");
+    const next = await invoke<{ questions: string[] }>("question.library.apply", {
+      projectDirectory: directory,
+      id,
+      mode
+    });
+    if (!next) {
+      return;
+    }
+    setQuestions(next.questions.length > 0 ? next.questions : [""]);
+    setPreflight(null);
+    setStatus(mode === "append" ? "已追加問題庫題目到目前草稿。" : "已用問題庫題目取代目前草稿。");
+  }
+
+  async function removeQuestionLibrary(id: string, name: string) {
+    setStatus("");
+    if ((await invoke<unknown>("question.library.remove", { id })) === null) {
+      return;
+    }
+    if (editingQuestionLibraryId === id) {
+      setEditingQuestionLibraryId(null);
+      setQuestionLibraryName("");
+    }
+    await refreshQuestionLibrary();
+    setStatus(`已從問題庫移除「${name}」。`);
   }
 
   async function useLibraryPersona(entry: LibraryEntry) {
@@ -948,9 +1012,10 @@ export function App() {
           </section>
         )}
         {stage === "questions" && (
+          <>
           <section className="card">
             <h1>問題</h1>
-            <p>可以逐題記錄想詢問的問題，每一題都會放進 Question Set。</p>
+            <p>可以逐題記錄想詢問的問題，每一題都會放進 Question Set。載入問題庫是副本，之後改庫不會改到已完成的 Run。</p>
             {questions.map((question, index) => (
               <label key={index}>
                 問題 {index + 1}
@@ -960,13 +1025,113 @@ export function App() {
                     setQuestions(questions.map((item, i) => (i === index ? event.target.value : item)))
                   }
                 />
-                {questions.length > 1 ? (
-                  <button onClick={() => setQuestions(questions.filter((_, i) => i !== index))}>移除</button>
-                ) : null}
+                <div className="actions">
+                  {index > 0 ? (
+                    <button
+                      onClick={() =>
+                        setQuestions((current) => {
+                          const next = [...current];
+                          [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                          return next;
+                        })
+                      }
+                    >
+                      上移
+                    </button>
+                  ) : null}
+                  {index < questions.length - 1 ? (
+                    <button
+                      onClick={() =>
+                        setQuestions((current) => {
+                          const next = [...current];
+                          [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                          return next;
+                        })
+                      }
+                    >
+                      下移
+                    </button>
+                  ) : null}
+                  {questions.length > 1 ? (
+                    <button onClick={() => setQuestions(questions.filter((_, i) => i !== index))}>移除</button>
+                  ) : null}
+                </div>
               </label>
             ))}
             <button onClick={() => setQuestions([...questions, ""])}>新增問題</button>
           </section>
+          <section className="card">
+            <h1>問題庫</h1>
+            <p>保存單題或整組問題，重開 App 後仍可搜尋載入。載入時請選擇追加或取代。</p>
+            <label>
+              問題集名稱
+              <input
+                value={questionLibraryName}
+                onChange={(event) => setQuestionLibraryName(event.target.value)}
+                placeholder="例如：試辦評估"
+              />
+            </label>
+            <div className="actions">
+              <button className="primary" onClick={() => void saveCurrentQuestionsToLibrary()}>
+                {editingQuestionLibraryId ? "更新問題庫項目" : "保存目前問題到問題庫"}
+              </button>
+              {editingQuestionLibraryId ? (
+                <button
+                  onClick={() => {
+                    setEditingQuestionLibraryId(null);
+                    setQuestionLibraryName("");
+                  }}
+                >
+                  取消編輯
+                </button>
+              ) : null}
+            </div>
+            <label>
+              搜尋
+              <input
+                value={questionLibraryQuery}
+                onChange={(event) => {
+                  const query = event.target.value;
+                  setQuestionLibraryQuery(query);
+                  void refreshQuestionLibrary(query);
+                }}
+                placeholder="名稱或題目文字"
+              />
+            </label>
+            {questionLibrary?.entries.length ? (
+              <ul className="plain-list library-list">
+                {questionLibrary.entries.map((entry) => (
+                  <li key={entry.id} className="library-item">
+                    <div>
+                      <strong>{entry.name}</strong>
+                      <p className="muted">{entry.questions.length} 題 · {entry.questions[0]}</p>
+                    </div>
+                    <div className="actions">
+                      <button className="primary" onClick={() => void applyQuestionLibrary(entry.id, "append")}>
+                        追加
+                      </button>
+                      <button onClick={() => void applyQuestionLibrary(entry.id, "replace")}>取代</button>
+                      <button
+                        onClick={() => {
+                          setEditingQuestionLibraryId(entry.id);
+                          setQuestionLibraryName(entry.name);
+                          setQuestions(entry.questions.length > 0 ? entry.questions : [""]);
+                          setPreflight(null);
+                          setStatus(`已載入「${entry.name}」到表單，可修改後按更新。`);
+                        }}
+                      >
+                        編輯
+                      </button>
+                      <button onClick={() => void removeQuestionLibrary(entry.id, entry.name)}>移除</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">目前還沒有已保存的問題集。</p>
+            )}
+          </section>
+          </>
         )}
         {stage === "preflight" && (
           <section className="card">

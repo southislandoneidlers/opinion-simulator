@@ -18,6 +18,7 @@ import { validateWorkbook } from "@opinion-simulator/core";
 import { createIpcHandlers, dispatchDesktopIpc } from "./ipc-handlers";
 import { configureLibraryDirectory } from "./persona-library";
 import { configureQueueDirectory } from "./run-queue";
+import { configureQuestionLibraryDirectory } from "./question-library";
 import { configureLastProjectDirectory } from "./last-project";
 import {
   fingerprintKey,
@@ -37,6 +38,7 @@ describe("renderer secret-access over IPC", () => {
 
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-qlib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
     configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     delete process.env.GEMINI_API_KEY;
@@ -148,6 +150,7 @@ describe("workbook IPC", () => {
 
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-qlib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
     configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-workbook-"));
@@ -452,6 +455,7 @@ describe("submission identity over IPC", () => {
 
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-qlib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
     configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-sub-"));
@@ -633,6 +637,7 @@ describe("session disclaimer over IPC", () => {
 
   beforeEach(() => {
     configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-qlib-")));
     configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
     configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
     tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-disc-"));
@@ -669,5 +674,58 @@ describe("session disclaimer over IPC", () => {
       projectDirectory: firstDir
     })) as { disclaimerAcknowledged: boolean };
     expect(firstAgain.disclaimerAcknowledged).toBe(false);
+  });
+});
+
+describe("question library over IPC", () => {
+  let handlers: ReturnType<typeof createIpcHandlers>;
+  let tempRoot: string;
+
+  beforeEach(() => {
+    configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQuestionLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-qlib-")));
+    configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
+    configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
+    tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-qset-"));
+    handlers = createIpcHandlers({
+      chooseDirectory: async () => "/tmp",
+      chooseWorkbook: async () => null,
+      chooseMaterialFile: async () => null
+    });
+  });
+
+  afterEach(() => {
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it("saves, searches, and applies a question set into the current draft", async () => {
+    const projectDir = join(tempRoot, "project");
+    mkdirSync(projectDir);
+    await dispatchDesktopIpc(handlers, "project.create", {
+      projectDirectory: projectDir,
+      title: "Question Library"
+    });
+    await dispatchDesktopIpc(handlers, "project.saveDraft", {
+      projectDirectory: projectDir,
+      sourceText: "材料",
+      personaRaw: "角色",
+      personaLabel: "角色",
+      questions: ["目前題？"]
+    });
+    const saved = (await dispatchDesktopIpc(handlers, "question.library.save", {
+      name: "試辦評估",
+      questions: ["你會支持這項計畫嗎？"]
+    })) as { entry: { id: string; name: string } };
+    expect(saved.entry.name).toBe("試辦評估");
+    const listed = (await dispatchDesktopIpc(handlers, "question.library.list", {
+      query: "支持"
+    })) as { entries: Array<{ name: string }> };
+    expect(listed.entries.map((entry) => entry.name)).toEqual(["試辦評估"]);
+    const appended = (await dispatchDesktopIpc(handlers, "question.library.apply", {
+      projectDirectory: projectDir,
+      id: saved.entry.id,
+      mode: "append"
+    })) as { questions: string[] };
+    expect(appended.questions).toEqual(["目前題？", "你會支持這項計畫嗎？"]);
   });
 });
