@@ -15,12 +15,12 @@ trace stays in Run artifacts.
 ## Core rules
 
 Next-version decisions confirmed on 2026-09-07 are specified in
-[v0.4 使用回饋改進規格](v04-usability-improvements.md). Increments 1 and 2 are implemented: visible submission status and Main-side
+[v0.4 使用回饋改進規格](v04-usability-improvements.md). Increments 1–3 are implemented: visible submission status and Main-side
 `submissionId` deduplication prevent duplicate jobs; disclaimer acknowledgement
-is a Project-session flag separate from exact-plan preview and approval.
-Remaining items are planned, not implemented: OpenRouter replaces direct
-OpenAI for new requests; same-submission Results share one comparison page;
-a local question library enables reuse.
+is a Project-session flag separate from exact-plan preview and approval;
+same-submission Results share one comparison page keyed by a persistent
+execution batch. Remaining items are planned, not implemented: OpenRouter
+replaces direct OpenAI for new requests; a local question library enables reuse.
 Historical OpenAI artifacts remain readable and immutable.
 
 - Persona fields need raw-input support or explicit per-inference acceptance;

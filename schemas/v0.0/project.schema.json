@@ -45,6 +45,24 @@
     },
     "runIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
     "reportIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "executionBatches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["executionBatchId", "createdAt", "sourceId", "questionSetId", "provider", "model", "runIds", "reportIds"],
+        "properties": {
+          "executionBatchId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "sourceId": {"type": "string"},
+          "questionSetId": {"type": "string"},
+          "provider": {"type": "string", "minLength": 1},
+          "model": {"type": "string", "minLength": 1},
+          "runIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+          "reportIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
     "compatibility": {
       "type": "object",
       "required": ["writer", "writerVersion", "minimumReaderVersion"],

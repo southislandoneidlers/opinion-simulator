@@ -12,7 +12,9 @@
 - `packages/project-store` — Project writing and snapshot reading. New Projects
   are staged then published into an absent or empty directory. An existing valid
   Project receives appended Runs (next-sequence artifacts + atomic index
-  updates) and never has files deleted or overwritten. A hidden append journal
+  updates) and never has files deleted or overwritten. Optional
+  `executionBatches` on `project.json` groups Runs from one submit without
+  rewriting Run files. A hidden append journal
   makes interrupted appends recoverable without repeating a provider call. A
   non-empty directory that is not fully checksum- and schema-valid is refused.
 - `packages/providers-gemini` — mock adapter plus opt-in live Gemini client

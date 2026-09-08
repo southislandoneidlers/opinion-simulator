@@ -17,7 +17,10 @@ are appended, never written by replacing the folder. Existing Run, Report,
 Source, Persona, and methodology files are never deleted or overwritten.
 `project.json` lists grow by append (`runIds`, `reportIds`, `sourceIds`,
 `currentPersonaVersionIds`, `questionSets`, `promptTemplateVersions`).
-Checksums are regenerated as a derived index.
+Optional `executionBatches` records each submit's `executionBatchId` and its
+Run/Report ids; older Projects omit the field and remain valid. Checksums are
+regenerated as a derived index. Existing Run JSON is never rewritten to add
+batch membership.
 
 ## Integrity and interrupted appends
 

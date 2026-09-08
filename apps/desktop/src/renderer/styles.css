@@ -353,6 +353,43 @@ label.disclaimer-check {
   color: #8a1f11;
 }
 
+.reaction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+
+.reaction-card {
+  background: #f8f9fb;
+  border: 1px solid #e2e5e9;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.reaction-card h3,
+.reaction-card h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.question-compare {
+  margin-bottom: 16px;
+}
+
+.batch-page details {
+  margin: 10px 0;
+  border: 1px solid #e2e5e9;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.legacy-unbatched {
+  margin-top: 24px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e5e9;
+}
+
 .alert-warning {
   margin: 12px 0;
   padding: 12px 16px;

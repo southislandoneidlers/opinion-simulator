@@ -1,7 +1,7 @@
 # v0.4 使用回饋改進規格
 
 狀態：2026-09-07 使用者確認五項改進方向。
-2026-09-08：增量 1（送出提示與防止重複送出）與增量 2（Preflight 聲明分離）已實作；增量 3–5 尚未實作。
+2026-09-08：增量 1–3 已實作（送出防重、聲明分離、同頁比較）；增量 4–5 尚未實作。
 使用者回報目前實測正常運作，但沒有提供完整測試矩陣；不據此宣告跨平台、
 所有 provider 或所有 v0.3 exit criteria 均已驗收。
 
@@ -64,6 +64,17 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
   不依相同材料或相近時間猜測分組、不改寫既有 Runs。
 - 驗收：2 位以上 Persona 同頁、多題比較、三樣本、部分失敗／重試、
   相同 Source 的兩次送出分開、重啟後分組保持、歷史資料可讀。
+
+### 實作狀態（2026-09-08）
+
+- 每次送出以 `submissionId` 作為 `executionBatchId` 寫入 `project.json` 的可選
+  `executionBatches` 索引。不改寫既有 Run JSON。Workbook `batchId` 不用來合併。
+- Snapshot 提供 `executionBatches` 與 `unbatchedRuns`。舊資料沒有批次紀錄時標
+  「舊資料未記錄批次」，不依材料或時間猜測。
+- 結果頁預設同頁列出該批所有 Persona 的 Direct Reaction，並依共同問題排列回答。
+  建議、多樣本、原始回應與報告在同頁展開。多批送出可用批次切換，不再以單人分頁為主。
+- 報告跟隨目前選取批次的 Run，不拿其他批次最新報告頂替。
+- 自動測試覆蓋兩次送出分開、舊資料不猜測、同頁問題對齊。尚未做人工 GUI walkthrough。
 
 ## 3. Preflight 聲明只勾選一次
 
@@ -136,7 +147,7 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 ## 實作順序與驗證入口
 
 建議順序：送出防重與明顯狀態 → Preflight 聲明分離 → 批次同頁比較 → 問題庫
-→ OpenRouter 遷移。增量 1 與增量 2 已完成。下一個增量是同次送出結果同頁比較。
+→ OpenRouter 遷移。增量 1–3 已完成。下一個增量是本機問題庫。
 
 沿用公開 IPC／session／queue、provider adapter 及 Project 讀寫 seam；
 互動需求須增加 Renderer 行為驗證與人工 walkthrough，不能僅靠 Main 測試宣告完成。
@@ -145,6 +156,6 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ## 範圍外
 
-2026-09-07 記錄規格時未實作功能。增量 1 與增量 2 已於 2026-09-08 實作，見第 5、3 節。
+2026-09-07 記錄規格時未實作功能。增量 1–3 已於 2026-09-08 實作，見第 5、3、2 節。
 問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
 OpenRouter 遷移不包含任意自訂 API gateway。既有 v0.4 匯出等項目不因本文件被取消。

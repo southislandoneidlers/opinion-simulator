@@ -45,6 +45,7 @@ function writeRun(output: string, overrides: {
   createdAt?: string;
   completedAt?: string;
   rawResponse?: unknown;
+  executionBatchId?: string;
 }) {
   const createdAt = overrides.createdAt ?? "2026-08-24T07:00:00Z";
   const sourceText = overrides.sourceText ?? "第一階段先在三個行政區試辦，並公開每月支出與接種人次。";
@@ -113,7 +114,8 @@ function writeRun(output: string, overrides: {
       approvedAt: "2026-08-24T07:00:30Z",
       acknowledgedDisclaimer: true,
       realPersonReconfirmed: false
-    }
+    },
+    executionBatchId: overrides.executionBatchId
   });
 }
 
@@ -356,6 +358,73 @@ describe("writeCompletedRun append", () => {
       "project-desktop-001-run-001",
       "project-desktop-001-run-002"
     ]);
+    expect(validateProject(output).status).toBe("valid");
+  });
+});
+
+describe("execution batch grouping", () => {
+  it("groups Runs from one submit and keeps a second submit of the same Source separate", () => {
+    const output = mkdtempSync(join(tmpdir(), "opinion-simulator-exec-batch-"));
+    const parent = confirmManualPersona({
+      id: "persona-version-parent-v1",
+      personaId: "persona-parent",
+      label: "家長",
+      rawInput: "我是學生家長，在意溝通透明。",
+      fields: { roleAndContext: "我是學生家長，在意溝通透明。" },
+      confirmedAt: "2026-08-24T07:00:00Z",
+      confirmedBy: "test",
+      realPersonApplies: false
+    });
+    writeRun(output, {
+      runId: "project-desktop-001-run-001",
+      reportId: "project-desktop-001-report-001",
+      executionBatchId: "sub-first-submit"
+    });
+    writeRun(output, {
+      runId: "project-desktop-001-run-002",
+      reportId: "project-desktop-001-report-002",
+      persona: parent,
+      executionBatchId: "sub-first-submit"
+    });
+    writeRun(output, {
+      runId: "project-desktop-001-run-003",
+      reportId: "project-desktop-001-report-003",
+      executionBatchId: "sub-second-submit"
+    });
+    const snapshot = readSnapshot(output);
+    expect(snapshot.executionBatches.map((batch) => batch.executionBatchId)).toEqual([
+      "sub-first-submit",
+      "sub-second-submit"
+    ]);
+    expect(snapshot.executionBatches[0]?.runIds).toEqual([
+      "project-desktop-001-run-001",
+      "project-desktop-001-run-002"
+    ]);
+    expect(snapshot.executionBatches[0]?.runs.map((run) => run.personaLabel)).toEqual([
+      "政策分析師",
+      "家長"
+    ]);
+    expect(snapshot.executionBatches[1]?.runIds).toEqual(["project-desktop-001-run-003"]);
+    expect(snapshot.unbatchedRuns).toEqual([]);
+    const firstRunBytes = readFileSync(join(output, "runs", "project-desktop-001-run-001.json"));
+    writeRun(output, {
+      runId: "project-desktop-001-run-004",
+      reportId: "project-desktop-001-report-004",
+      executionBatchId: "sub-second-submit"
+    });
+    expect(readFileSync(join(output, "runs", "project-desktop-001-run-001.json"))).toEqual(firstRunBytes);
+    expect(validateProject(output).status).toBe("valid");
+  });
+
+  it("does not guess a batch for historical Runs that never recorded one", () => {
+    const output = mkdtempSync(join(tmpdir(), "opinion-simulator-legacy-unbatched-"));
+    writeRun(output, {
+      runId: "project-desktop-001-run-001",
+      reportId: "project-desktop-001-report-001"
+    });
+    const snapshot = readSnapshot(output);
+    expect(snapshot.executionBatches).toEqual([]);
+    expect(snapshot.unbatchedRuns.map((run) => run.runId)).toEqual(["project-desktop-001-run-001"]);
     expect(validateProject(output).status).toBe("valid");
   });
 });

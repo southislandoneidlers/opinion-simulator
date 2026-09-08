@@ -8,6 +8,7 @@ import {
   confirmDraftPersona,
   createDraft,
   enqueueAndProcess,
+  enqueueBatchAndProcess,
   enqueueRun,
   isDisclaimerAcknowledged,
   setDraftDisclaimer,
@@ -553,5 +554,37 @@ describe("workbook draft import", () => {
     };
     expect(view.isBatch).toBe(true);
     expect(view.personas).toHaveLength(2);
+  });
+
+  it("records one execution batch per submit and keeps a second submit separate", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-exec-batch-"));
+    createDraft(projectDirectory, "Batch Compare");
+    const imported = await importWorkbookToDraft(projectDirectory, GOLDEN_WORKBOOK);
+    expect(imported.personaCount).toBe(2);
+    confirmDraftPersona(projectDirectory);
+    setDraftDisclaimer(projectDirectory, true);
+    const firstView = renderDraftPreflight(projectDirectory) as { batchPlanHash: string };
+    const first = await enqueueBatchAndProcess(
+      projectDirectory,
+      firstView.batchPlanHash,
+      true,
+      "mocked",
+      "sub-compare-first"
+    );
+    expect(first.snapshot?.executionBatches).toHaveLength(1);
+    expect(first.snapshot?.executionBatches[0]?.runIds).toHaveLength(2);
+    expect(first.snapshot?.executionBatches[0]?.executionBatchId).toBe("sub-compare-first");
+    const secondView = renderDraftPreflight(projectDirectory) as { batchPlanHash: string };
+    const second = await enqueueBatchAndProcess(
+      projectDirectory,
+      secondView.batchPlanHash,
+      true,
+      "mocked",
+      "sub-compare-second"
+    );
+    expect(second.snapshot?.executionBatches).toHaveLength(2);
+    expect(second.snapshot?.executionBatches[1]?.executionBatchId).toBe("sub-compare-second");
+    expect(second.snapshot?.executionBatches[0]?.runIds).toEqual(first.snapshot?.executionBatches[0]?.runIds);
+    expect(second.snapshot?.unbatchedRuns).toEqual([]);
   });
 });

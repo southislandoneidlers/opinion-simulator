@@ -7,6 +7,7 @@ import {
   submissionStatusTone,
   type SubmissionPhase
 } from "./submission-status";
+import { LEGACY_UNBATCHED_NOTICE, answersByQuestion } from "./batch-comparison";
 
 type Stage = "overview" | "settings" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
 
@@ -110,7 +111,7 @@ export function App() {
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState("");
   const [recoverableNotice, setRecoverableNotice] = useState<string | null>(null);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderId>("gemini");
   const [model, setModel] = useState<string>("");
   const [customModel, setCustomModel] = useState(false);
@@ -579,6 +580,11 @@ export function App() {
     }
     if (next.jobs) {
       setJobs(next.jobs);
+    }
+    const batches = next.snapshot?.executionBatches as Array<{ executionBatchId?: string }> | undefined;
+    const latestBatchId = batches?.[batches.length - 1]?.executionBatchId;
+    if (typeof latestBatchId === "string") {
+      setSelectedBatchId(latestBatchId);
     }
     const label = submissionStatusText(phase, next.error);
     if (phase === "completed" && next.snapshot) {
@@ -1092,65 +1098,210 @@ export function App() {
         {stage === "results" && (
           <section className="card">
             <h1>結果</h1>
-            {snapshot?.result || (snapshot?.runs && (snapshot.runs as any[]).length > 0) ? (
-              <>
-                {(snapshot.runs as any[] | undefined)?.length ? (
-                  <div>
-                    <h3>Persona 模擬結果切換</h3>
-                    <div className="persona-tab-group">
-                      {(snapshot.runs as any[]).map((r) => {
-                        const isCurrent = selectedRunId ? r.runId === selectedRunId : r.runId === snapshot.runId;
-                        return (
-                          <button
-                            key={r.runId}
-                            className={isCurrent ? "active" : ""}
-                            onClick={() => setSelectedRunId(r.runId)}
-                          >
-                            {r.personaLabel} ({r.runId})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-                {(() => {
-                  const runs = (snapshot.runs as any[]) ?? [];
-                  const active = runs.find((r) => r.runId === selectedRunId) ?? runs[runs.length - 1] ?? snapshot;
-                  const res = (active.result as Record<string, any>) ?? {};
-                  const stability = active.stabilityComparison as Record<string, any> | null;
-
-                  return (
-                    <>
-                      <p className="muted">
-                        此專案共 {(snapshot.runIds as unknown[] ?? []).length || runs.length} 次 Run，目前檢視：{active.runId}（{active.personaLabel || "未命名"}）
-                      </p>
-                      {stability ? (
-                        <div className="stability-card">
-                          <h3>多樣本穩定度比較 (Multi-Sample Stability)</h3>
-                          <pre>{JSON.stringify(stability, null, 2)}</pre>
-                        </div>
-                      ) : null}
-                      <h2>Direct Reaction</h2>
-                      <p>{String(res.directReaction ?? "")}</p>
-                      <h2>Persona Recommendations</h2>
-                      <pre>{JSON.stringify(res.personaRecommendations, null, 2)}</pre>
-                      <h2>System Suggestions</h2>
-                      <pre>{JSON.stringify(res.systemSuggestions, null, 2)}</pre>
-                      <h2>原始回應</h2>
-                      <pre>{JSON.stringify(active.rawResponse, null, 2)}</pre>
-                    </>
-                  );
-                })()}
-                <h2>報告（Markdown）</h2>
-                <pre>{String(snapshot.reportMarkdown ?? "")}</pre>
-              </>
-            ) : (
-              <p>尚未產生結果。請先在「執行」頁完成一次 Run。</p>
-            )}
+            <BatchResultsPanel
+              snapshot={snapshot}
+              jobs={jobs.filter((job) => !directory || job.projectDirectory === directory)}
+              selectedBatchId={selectedBatchId}
+              onSelectBatch={setSelectedBatchId}
+            />
           </section>
         )}
         {status ? <p className={statusBannerClass(status)}>{status}</p> : null}
       </main>
+    </div>
+  );
+}
+
+type SnapshotRunView = {
+  runId: string;
+  personaLabel: string;
+  result: { directReaction?: string; personaRecommendations?: unknown; systemSuggestions?: unknown } | null;
+  answers?: Array<{ question: string; answer: string }>;
+  rawResponse: unknown;
+  stabilityComparison?: unknown;
+  reportMarkdown?: string | null;
+  samples?: Array<{ sampleId: string; result: unknown }>;
+  provider?: string | null;
+  model?: string | null;
+};
+
+type ExecutionBatchView = {
+  executionBatchId: string;
+  sourceText: string;
+  questions: string[];
+  questionTitle?: string;
+  provider: string | null;
+  model: string | null;
+  runIds: string[];
+  runs: SnapshotRunView[];
+};
+
+function BatchResultsPanel({
+  snapshot,
+  jobs,
+  selectedBatchId,
+  onSelectBatch
+}: {
+  snapshot: Record<string, unknown> | null;
+  jobs: JobSummary[];
+  selectedBatchId: string | null;
+  onSelectBatch: (id: string) => void;
+}) {
+  const batches = (snapshot?.executionBatches as ExecutionBatchView[] | undefined) ?? [];
+  const unbatched = (snapshot?.unbatchedRuns as SnapshotRunView[] | undefined) ?? [];
+  const hasLegacyOnly =
+    batches.length === 0 &&
+    ((snapshot?.runs as SnapshotRunView[] | undefined)?.length ?? 0) > 0 &&
+    unbatched.length === 0;
+  const legacyRuns = hasLegacyOnly ? ((snapshot?.runs as SnapshotRunView[]) ?? []) : unbatched;
+  const activeBatch =
+    batches.find((batch) => batch.executionBatchId === selectedBatchId) ?? batches[batches.length - 1] ?? null;
+
+  if (!snapshot || (batches.length === 0 && legacyRuns.length === 0 && !snapshot.result)) {
+    return <p>尚未產生結果。請先在「執行」頁完成一次 Run。</p>;
+  }
+
+  return (
+    <>
+      {batches.length > 1 ? (
+        <div className="batch-switcher">
+          <h2>送出批次</h2>
+          <p className="muted">每一次送出是獨立批次；相同材料再送出不會與上一批合併。</p>
+          <div className="actions">
+            {batches.map((batch, index) => (
+              <button
+                key={batch.executionBatchId}
+                className={activeBatch?.executionBatchId === batch.executionBatchId ? "primary" : ""}
+                onClick={() => onSelectBatch(batch.executionBatchId)}
+              >
+                第 {index + 1} 批 · {batch.runs.length} 位 Persona
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {activeBatch ? (
+        <SamePageBatch
+          batch={activeBatch}
+          jobs={jobs.filter((job) => job.submissionId === activeBatch.executionBatchId)}
+        />
+      ) : null}
+      {legacyRuns.length > 0 ? (
+        <section className="legacy-unbatched">
+          <h2>{LEGACY_UNBATCHED_NOTICE}</h2>
+          <p className="muted">這些結果寫入時尚未記錄送出批次，不會依材料或時間猜測分組。</p>
+          <SamePageBatch
+            batch={{
+              executionBatchId: "legacy-unbatched",
+              sourceText: String(snapshot.sourceText ?? ""),
+              questions: Array.isArray(snapshot.questions) ? (snapshot.questions as string[]) : [],
+              provider: typeof snapshot.provider === "string" ? snapshot.provider : null,
+              model: typeof snapshot.model === "string" ? snapshot.model : null,
+              runIds: legacyRuns.map((run) => run.runId),
+              runs: legacyRuns
+            }}
+            jobs={[]}
+            legacy
+          />
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+function SamePageBatch({
+  batch,
+  jobs,
+  legacy = false
+}: {
+  batch: ExecutionBatchView;
+  jobs: JobSummary[];
+  legacy?: boolean;
+}) {
+  const questionRows = answersByQuestion(batch.questions, batch.runs);
+  const pendingJobs = jobs.filter((job) => job.status !== "completed");
+  return (
+    <div className="batch-page">
+      {!legacy ? (
+        <>
+          <h2>本批摘要</h2>
+          <p className="muted">
+            {batch.runs.length} 位 Persona · {batch.provider ?? "未知供應商"} · {batch.model ?? "未知型號"}
+          </p>
+          <h3>共享材料</h3>
+          <pre>{batch.sourceText}</pre>
+          <h3>{batch.questionTitle || "問題"}</h3>
+          <ol>
+            {batch.questions.map((question) => (
+              <li key={question}>{question}</li>
+            ))}
+          </ol>
+        </>
+      ) : null}
+      {pendingJobs.length > 0 ? (
+        <ul className="plain-list">
+          {pendingJobs.map((job) => (
+            <li key={job.jobId}>
+              {job.runId}：{job.status}
+              {job.error ? ` · ${job.error}` : ""}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <h2>Direct Reaction</h2>
+      <div className="reaction-grid">
+        {batch.runs.map((run) => (
+          <article key={run.runId} className="reaction-card">
+            <h3>{run.personaLabel}</h3>
+            <p>{String(run.result?.directReaction ?? "")}</p>
+          </article>
+        ))}
+      </div>
+      {questionRows.length > 0 ? (
+        <>
+          <h2>依問題比較</h2>
+          {questionRows.map((row) => (
+            <div key={row.question} className="question-compare">
+              <h3>{row.question}</h3>
+              <div className="reaction-grid">
+                {row.answers.map((item) => (
+                  <article key={item.runId} className="reaction-card">
+                    <h4>{item.personaLabel}</h4>
+                    <p>{item.answer}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
+      {batch.runs.map((run) => {
+        return (
+          <details key={`details-${run.runId}`}>
+            <summary>
+              {run.personaLabel} 的建議、多樣本、原始回應與報告
+            </summary>
+            {run.stabilityComparison ? (
+              <div className="stability-card">
+                <h3>多樣本穩定度比較</h3>
+                <pre>{JSON.stringify(run.stabilityComparison, null, 2)}</pre>
+              </div>
+            ) : null}
+            <h3>Persona Recommendations</h3>
+            <pre>{JSON.stringify(run.result?.personaRecommendations, null, 2)}</pre>
+            <h3>System Suggestions</h3>
+            <pre>{JSON.stringify(run.result?.systemSuggestions, null, 2)}</pre>
+            <h3>原始回應</h3>
+            <pre>{JSON.stringify(run.rawResponse, null, 2)}</pre>
+            {run.reportMarkdown ? (
+              <>
+                <h3>報告（Markdown）</h3>
+                <pre>{run.reportMarkdown}</pre>
+              </>
+            ) : null}
+          </details>
+        );
+      })}
     </div>
   );
 }

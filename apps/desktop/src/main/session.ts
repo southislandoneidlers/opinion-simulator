@@ -905,7 +905,8 @@ async function completeRun(
   draft: DraftState,
   approved: ApprovedPlan,
   samples: StoredSampleResult[],
-  completedAt = nowIso()
+  completedAt = nowIso(),
+  executionBatchId?: string
 ) {
   if (activeJobId && isCancelRequested(activeJobId)) {
     throw new Error("Job cancelled");
@@ -933,7 +934,8 @@ async function completeRun(
     runId: approved.runId,
     reportId: approved.reportId,
     samples,
-    approval: approved.approval
+    approval: approved.approval,
+    executionBatchId
   });
   return readSnapshot(draft.projectDirectory);
 }
@@ -1312,7 +1314,8 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
       draft,
       { ...built, approval: job.approval },
       completedSamples,
-      completedSamples[completedSamples.length - 1].completedAt
+      completedSamples[completedSamples.length - 1].completedAt,
+      job.submissionId
     );
     if (isCancelRequested(job.jobId)) {
       updateJob(job.jobId, { status: "cancelled", completedAt: nowIso() });

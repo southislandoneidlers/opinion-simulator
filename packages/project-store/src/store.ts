@@ -43,17 +43,50 @@ export type ProjectSnapshot = {
   rawResponse: unknown;
   provider: string | null;
   model: string | null;
-  runs?: Array<{
-    runId: string;
-    personaId?: string;
-    personaVersionId?: string;
-    personaLabel: string;
-    result: StructuredResult | null;
-    rawResponse: unknown;
-    stabilityComparison?: unknown;
-    provider: string | null;
-    model: string | null;
-  }>;
+  runs?: SnapshotRun[];
+  executionBatches: ExecutionBatchView[];
+  unbatchedRuns: SnapshotRun[];
+};
+
+export type SnapshotRun = {
+  runId: string;
+  reportId?: string;
+  personaId?: string;
+  personaVersionId?: string;
+  personaLabel: string;
+  result: StructuredResult | null;
+  answers: Array<{ question: string; answer: string }>;
+  rawResponse: unknown;
+  stabilityComparison?: unknown;
+  provider: string | null;
+  model: string | null;
+  reportMarkdown: string | null;
+  samples: Array<{ sampleId: string; result: StructuredResult | null }>;
+};
+
+export type ExecutionBatchView = {
+  executionBatchId: string;
+  createdAt: string;
+  sourceId: string;
+  sourceText: string;
+  questions: string[];
+  questionTitle: string;
+  provider: string | null;
+  model: string | null;
+  runIds: string[];
+  reportIds: string[];
+  runs: SnapshotRun[];
+};
+
+export type ExecutionBatchRecord = {
+  executionBatchId: string;
+  createdAt: string;
+  sourceId: string;
+  questionSetId: string;
+  provider: string;
+  model: string;
+  runIds: string[];
+  reportIds: string[];
 };
 
 export type WriteTargetKind = "absent" | "empty" | "project" | "occupied";
@@ -80,6 +113,7 @@ export type ProjectInspection = {
   promptTemplateVersions: Array<{ id: string; version: number; contentHash: string }>;
   runIds: string[];
   reportIds: string[];
+  executionBatches: ExecutionBatchRecord[];
   compatibility: {
     writer: string;
     writerVersion: string;
@@ -119,6 +153,7 @@ type CompletedRunInput = {
     acknowledgedDisclaimer: true;
     realPersonReconfirmed: boolean;
   };
+  executionBatchId?: string;
 };
 
 function isCanonical(relativePath: string): boolean {
@@ -174,6 +209,55 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isIsoDate(value: unknown): value is string {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function areExecutionBatchesValid(
+  project: JsonObject,
+  runIds: string[],
+  reportIds: string[]
+): boolean {
+  if (!Array.isArray(project.executionBatches)) {
+    return false;
+  }
+  const seenBatchIds = new Set<string>();
+  const seenRunIds = new Set<string>();
+  const seenReportIds = new Set<string>();
+  for (const batch of project.executionBatches) {
+    if (
+      !isRecord(batch) ||
+      !hasOnlyKeys(batch, [
+        "executionBatchId",
+        "createdAt",
+        "sourceId",
+        "questionSetId",
+        "provider",
+        "model",
+        "runIds",
+        "reportIds"
+      ]) ||
+      !isIdentifier(batch.executionBatchId) ||
+      !isIsoDate(batch.createdAt) ||
+      !isIdentifier(batch.sourceId) ||
+      !isIdentifier(batch.questionSetId) ||
+      !isNonEmptyString(batch.provider) ||
+      !isNonEmptyString(batch.model) ||
+      !isUniqueStringArray(batch.runIds) ||
+      !isUniqueStringArray(batch.reportIds) ||
+      seenBatchIds.has(batch.executionBatchId) ||
+      !batch.runIds.every((id) => runIds.includes(id) && !seenRunIds.has(id)) ||
+      !batch.reportIds.every((id) => reportIds.includes(id) && !seenReportIds.has(id))
+    ) {
+      return false;
+    }
+    seenBatchIds.add(batch.executionBatchId);
+    for (const id of batch.runIds) {
+      seenRunIds.add(id);
+    }
+    for (const id of batch.reportIds) {
+      seenReportIds.add(id);
+    }
+  }
+  return true;
 }
 
 function isUniqueStringArray(value: unknown, allowEmpty = false): value is string[] {
@@ -339,8 +423,9 @@ function projectDocumentsAreValid(
     "reportIds",
     "compatibility"
   ];
+  const projectKeysWithBatches = [...projectKeys, "executionBatches"];
   if (
-    !hasOnlyKeys(project, projectKeys) ||
+    !(hasOnlyKeys(project, projectKeys) || hasOnlyKeys(project, projectKeysWithBatches)) ||
     project.schemaVersion !== "0.0" ||
     !isIdentifier(project.projectId) ||
     !isNonEmptyString(project.title) ||
@@ -365,6 +450,9 @@ function projectDocumentsAreValid(
     !isNonEmptyString(project.compatibility.minimumReaderVersion) ||
     project.runIds.length !== project.reportIds.length
   ) {
+    return null;
+  }
+  if (project.executionBatches !== undefined && !areExecutionBatchesValid(project, project.runIds, project.reportIds)) {
     return null;
   }
   if (
@@ -738,6 +826,7 @@ export function inspectProject(projectDirectory: string): ProjectInspection | nu
       promptTemplateVersions: Array<{ id: string; version: number; contentHash: string }>;
       runIds: string[];
       reportIds: string[];
+      executionBatches?: ExecutionBatchRecord[];
       compatibility: { writer: string; writerVersion: string; minimumReaderVersion: string };
     };
     const validPersonas = personasDoc.versions as PersonaVersion[];
@@ -757,6 +846,7 @@ export function inspectProject(projectDirectory: string): ProjectInspection | nu
       promptTemplateVersions: validProject.promptTemplateVersions,
       runIds: validProject.runIds,
       reportIds: validProject.reportIds,
+      executionBatches: validProject.executionBatches ?? [],
       compatibility: validProject.compatibility
     };
   } catch {
@@ -871,10 +961,40 @@ function buildRunDocument(input: CompletedRunInput) {
   };
 }
 
+function executionBatchFromInput(input: CompletedRunInput): ExecutionBatchRecord {
+  return {
+    executionBatchId: input.executionBatchId as string,
+    createdAt: input.completedAt,
+    sourceId: input.sourceId,
+    questionSetId: input.questionSet.id,
+    provider: input.plan.provider,
+    model: input.plan.model,
+    runIds: [input.runId],
+    reportIds: [input.reportId]
+  };
+}
+
+function upsertExecutionBatches(
+  existing: ExecutionBatchRecord[],
+  input: CompletedRunInput
+): ExecutionBatchRecord[] {
+  if (!input.executionBatchId) {
+    return existing;
+  }
+  const next = existing.map((batch) => ({ ...batch, runIds: [...batch.runIds], reportIds: [...batch.reportIds] }));
+  const found = next.find((batch) => batch.executionBatchId === input.executionBatchId);
+  if (found) {
+    found.runIds = appendUnique(found.runIds, input.runId);
+    found.reportIds = appendUnique(found.reportIds, input.reportId);
+    return next;
+  }
+  return [...next, executionBatchFromInput(input)];
+}
+
 function buildProjectDocument(input: CompletedRunInput, existing: ProjectInspection | null) {
   const promptTemplate = input.plan.promptTemplate;
   if (!existing) {
-    return {
+    const fresh: Record<string, unknown> = {
       schemaVersion: "0.0",
       projectId: input.projectId,
       title: input.title,
@@ -894,6 +1014,10 @@ function buildProjectDocument(input: CompletedRunInput, existing: ProjectInspect
         minimumReaderVersion: "0.0"
       }
     };
+    if (input.executionBatchId) {
+      fresh.executionBatches = [executionBatchFromInput(input)];
+    }
+    return fresh;
   }
   const templates = existing.promptTemplateVersions.some(
     (item) =>
@@ -903,7 +1027,7 @@ function buildProjectDocument(input: CompletedRunInput, existing: ProjectInspect
   )
     ? existing.promptTemplateVersions
     : [...existing.promptTemplateVersions, promptTemplate];
-  return {
+  const next: Record<string, unknown> = {
     schemaVersion: "0.0",
     projectId: existing.projectId,
     title: input.title.trim() ? input.title : existing.title,
@@ -923,6 +1047,11 @@ function buildProjectDocument(input: CompletedRunInput, existing: ProjectInspect
       minimumReaderVersion: existing.compatibility.minimumReaderVersion || "0.0"
     }
   };
+  const executionBatches = upsertExecutionBatches(existing.executionBatches ?? [], input);
+  if (executionBatches.length > 0) {
+    next.executionBatches = executionBatches;
+  }
+  return next;
 }
 
 function writeFreshProject(target: string, input: CompletedRunInput): void {
@@ -1155,28 +1284,79 @@ export function readSnapshot(projectDirectory: string): ProjectSnapshot {
   if (reportId) {
     reportMarkdown = readFileSync(join(projectDirectory, "reports", `${reportId}.md`), "utf8");
   }
-  const runs = runIds
-    .map((rId) => {
-      try {
-        const run = JSON.parse(readFileSync(join(projectDirectory, "runs", `${rId}.json`), "utf8"));
-        const pRef = run.executionPlan?.personaRefs?.[0];
-        const matchedPersona = versions.find((v) => v.id === pRef?.personaVersionId);
-        return {
-          runId: rId,
-          personaId: pRef?.personaId,
-          personaVersionId: pRef?.personaVersionId,
-          personaLabel: matchedPersona?.label ?? pRef?.personaId ?? rId,
-          result: run.samples[0]?.parsedResult ?? null,
-          rawResponse: run.samples[0]?.rawProviderResponse ?? null,
-          stabilityComparison: run.stabilityComparison ?? null,
-          provider: run.samples[0]?.normalizedRequest?.provider ?? run.executionPlan?.provider ?? null,
-          model: run.samples[0]?.normalizedRequest?.model ?? run.executionPlan?.model ?? null
-        };
-      } catch {
-        return null;
+  const runs: SnapshotRun[] = [];
+  for (const rId of runIds) {
+    try {
+      const run = JSON.parse(readFileSync(join(projectDirectory, "runs", `${rId}.json`), "utf8"));
+      const pRef = run.executionPlan?.personaRefs?.[0];
+      const matchedPersona = versions.find((v) => v.id === pRef?.personaVersionId);
+      const parsed = (run.samples[0]?.parsedResult ?? null) as StructuredResult | null;
+      const reportRef = typeof run.report?.reportId === "string" ? run.report.reportId : undefined;
+      const runReport =
+        reportRef && existsSync(join(projectDirectory, "reports", `${reportRef}.md`))
+          ? readFileSync(join(projectDirectory, "reports", `${reportRef}.md`), "utf8")
+          : null;
+      runs.push({
+        runId: rId,
+        reportId: reportRef,
+        personaId: pRef?.personaId,
+        personaVersionId: pRef?.personaVersionId,
+        personaLabel: matchedPersona?.label ?? pRef?.personaId ?? rId,
+        result: parsed,
+        answers: Array.isArray(parsed?.answers) ? parsed.answers : [],
+        rawResponse: run.samples[0]?.rawProviderResponse ?? null,
+        stabilityComparison: run.stabilityComparison ?? null,
+        provider: run.samples[0]?.normalizedRequest?.provider ?? run.executionPlan?.provider ?? null,
+        model: run.samples[0]?.normalizedRequest?.model ?? run.executionPlan?.model ?? null,
+        reportMarkdown: runReport,
+        samples: Array.isArray(run.samples)
+          ? run.samples.map((sample: { sampleId?: string; parsedResult?: StructuredResult | null }) => ({
+              sampleId: String(sample.sampleId ?? ""),
+              result: sample.parsedResult ?? null
+            }))
+          : []
+      });
+    } catch {
+      // Skip unreadable Run files; inspectProject already required them to parse.
+    }
+  }
+
+  const batchRecords = Array.isArray(project.executionBatches)
+    ? (project.executionBatches as ExecutionBatchRecord[])
+    : [];
+  const batchedRunIds = new Set(batchRecords.flatMap((batch) => batch.runIds));
+  const executionBatches: ExecutionBatchView[] = batchRecords.map((batch) => {
+    const batchRuns: SnapshotRun[] = [];
+    for (const id of batch.runIds) {
+      const match = runs.find((run) => run.runId === id);
+      if (match) {
+        batchRuns.push(match);
       }
-    })
-    .filter((x): x is NonNullable<typeof x> => Boolean(x));
+    }
+    const matchedQuestionSet =
+      (Array.isArray(project.questionSets)
+        ? project.questionSets.find((item: QuestionSet) => item.id === batch.questionSetId)
+        : null) ?? questionSet;
+    const batchSource = sourceId === batch.sourceId ? sourceText : sourceText;
+    const sourceFromBatch =
+      batch.sourceId && existsSync(join(projectDirectory, "sources", `${batch.sourceId}.txt`))
+        ? readFileSync(join(projectDirectory, "sources", `${batch.sourceId}.txt`), "utf8")
+        : batchSource;
+    return {
+      executionBatchId: batch.executionBatchId,
+      createdAt: batch.createdAt,
+      sourceId: batch.sourceId,
+      sourceText: sourceFromBatch,
+      questions: matchedQuestionSet.questions ?? [],
+      questionTitle: matchedQuestionSet.title ?? "",
+      provider: batch.provider,
+      model: batch.model,
+      runIds: batch.runIds,
+      reportIds: batch.reportIds,
+      runs: batchRuns
+    };
+  });
+  const unbatchedRuns = runs.filter((run) => !batchedRunIds.has(run.runId));
 
   return {
     projectDirectory,
@@ -1194,6 +1374,8 @@ export function readSnapshot(projectDirectory: string): ProjectSnapshot {
     rawResponse,
     provider,
     model,
-    runs
+    runs,
+    executionBatches,
+    unbatchedRuns
   };
 }

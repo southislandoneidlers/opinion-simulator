@@ -4,9 +4,9 @@ Freely navigable stages; gates enforce safety, not navigation order.
 
 Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
 defines the confirmed 2026-09-07 changes. Visible submission status,
-Main-side duplicate-submit prevention, and session disclaimer retention are
-implemented. Batch comparison, question reuse, and OpenRouter remain
-unimplemented.
+Main-side duplicate-submit prevention, session disclaimer retention, and
+same-page batch comparison are implemented. Question reuse and OpenRouter
+remain unimplemented.
 
 Stages:
 
@@ -74,3 +74,11 @@ Stages:
 - Switching Project or restarting the App clears the checkbox. Checking it
   does not enqueue a Job or mint a plan approval; submit still requires a
   current preview hash.
+
+## Implemented v0.4 increment 3 workspace behavior
+
+- Results open on the current execution batch: shared Source, questions, and
+  model first, then every Persona's Direct Reaction on the same page, then
+  answers aligned by question. Extra detail expands in place.
+- A new submit of the same material is a new batch. Historical Runs without a
+  recorded batch show 「舊資料未記錄批次」 and are not regrouped by guesswork.
