@@ -212,13 +212,14 @@ Exit criteria:
 
 ## v0.4 — Review, synthesis, and complete exports
 
-Status: five usability improvements confirmed on 2026-09-07; specification
-recorded, implementation not started. See the canonical
+Status: five usability improvements confirmed on 2026-09-07. Increment 1
+(submission status and Main/queue dedup) implemented on 2026-09-08;
+increments 2–5 not started. See the canonical
 [v0.4 使用回饋改進規格](product/v04-usability-improvements.md).
 
 優先增量順序（先完成以下五項，再接續原有 Synthesis／匯出工作）：
 
-1. 明顯的送出中／成功／失敗提示與 Main／queue 防止重複送出。
+1. 明顯的送出中／成功／失敗提示與 Main／queue 防止重複送出。**已完成（2026-09-08）**
 2. Preflight 聲明勾選保留，與每次精確計畫的預覽／核准分離。
 3. 同次送出、同份材料的所有 Persona 意見在同頁比較，持久保存批次關聯。
 4. 可保存與重用單題／多題問題集的本機問題庫。

@@ -320,6 +320,39 @@ label.disclaimer-check {
   color: #8a1f11;
 }
 
+.submit-status {
+  min-height: 1.6em;
+  margin: 8px 0 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.submit-status-idle {
+  padding: 0;
+  min-height: 0;
+  margin: 8px 0;
+}
+
+.submit-status-pending {
+  background: #eef3f8;
+  border: 1px solid #9db6cc;
+  color: #1d3d5c;
+}
+
+.submit-status-ok {
+  background: #e7f6ec;
+  border: 1px solid #8fbf9f;
+  color: #1e5b34;
+}
+
+.submit-status-error {
+  background: #fdecea;
+  border: 1px solid #e5a09a;
+  color: #8a1f11;
+}
+
 .alert-warning {
   margin: 12px 0;
   padding: 12px 16px;

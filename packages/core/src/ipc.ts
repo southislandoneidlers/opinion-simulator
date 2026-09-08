@@ -13,6 +13,7 @@ export const IPC_CHANNELS = [
   "run.liveOpenai",
   "queue.enqueue",
   "queue.enqueueBatch",
+  "queue.submissionStatus",
   "queue.list",
   "queue.cancel",
   "queue.retry",

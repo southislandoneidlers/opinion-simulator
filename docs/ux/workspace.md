@@ -3,9 +3,9 @@
 Freely navigable stages; gates enforce safety, not navigation order.
 
 Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
-defines the confirmed 2026-09-07 changes to batch comparison, disclaimer
-retention, question reuse, and visible submission feedback. The sections below
-describe existing behavior; the linked next-version behavior is not implemented.
+defines the confirmed 2026-09-07 changes. Visible submission status and
+Main-side duplicate-submit prevention are implemented. Batch comparison,
+disclaimer retention, question reuse, and OpenRouter remain unimplemented.
 
 Stages:
 
@@ -53,3 +53,14 @@ Stages:
 - Personas becomes a confirmed-Version multi-select of 1–30 people. Preflight
   presents every selected Persona, Sample count, and total request matrix;
   Results are grouped by Persona and retain per-Persona retry/trace controls.
+
+## Implemented v0.4 increment 1 workspace behavior
+
+- The Execution buttons send a Renderer-generated `submissionId`. A second
+  click or parallel IPC with the same id returns the same Jobs; a new
+  Preflight starts a new id.
+- Status text appears next to the Run buttons (`送出中` / `已接受，已加入佇列` /
+  `執行中` / `全部完成` / `部分失敗` / `送出失敗`) and is exposed to assistive
+  technology. Buttons stay disabled while a submission is in flight.
+- If the enqueue response is lost, the App queries `queue.submissionStatus`
+  before creating another batch.

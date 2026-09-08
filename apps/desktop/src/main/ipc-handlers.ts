@@ -1,4 +1,4 @@
-import { dispatchIpc, type IpcHandler } from "@opinion-simulator/core";
+import { dispatchIpc, isId, type IpcHandler } from "@opinion-simulator/core";
 import { toUserFacingError } from "./user-messages";
 import { PROVIDER_METADATA } from "@opinion-simulator/core";
 import { readSnapshot } from "@opinion-simulator/project-store";
@@ -15,6 +15,7 @@ import {
   credentialStatus,
   enqueueAndProcess,
   enqueueBatchAndProcess,
+  getSubmissionStatus,
   importWorkbookToDraft,
   listQueuedJobs,
   openOrCreateDraft,
@@ -37,6 +38,14 @@ export type IpcDependencies = {
   chooseWorkbook: () => Promise<string | null>;
   chooseMaterialFile: () => Promise<string | null>;
 };
+
+function requireSubmissionId(value: unknown): string {
+  const id = typeof value === "string" ? value.trim() : "";
+  if (!isId(id)) {
+    throw new Error("【送出】缺少有效的送出識別。請再試一次；相同送出不會建立第二批。");
+  }
+  return id;
+}
 
 export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHandler> {
   return {
@@ -107,7 +116,8 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
         String(payload.projectDirectory ?? ""),
         String(payload.planHash ?? ""),
         Boolean(payload.acknowledgedDisclaimer),
-        payload.mode
+        payload.mode,
+        requireSubmissionId(payload.submissionId)
       );
     },
     "queue.enqueueBatch": (payload) => {
@@ -118,9 +128,15 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
         String(payload.projectDirectory ?? ""),
         String(payload.batchPlanHash ?? ""),
         Boolean(payload.acknowledgedDisclaimer),
-        payload.mode
+        payload.mode,
+        requireSubmissionId(payload.submissionId)
       );
     },
+    "queue.submissionStatus": (payload) =>
+      getSubmissionStatus(
+        requireSubmissionId(payload.submissionId),
+        payload.projectDirectory ? String(payload.projectDirectory) : undefined
+      ),
     "queue.list": (payload) => ({
       jobs: listQueuedJobs(
         payload.projectDirectory ? String(payload.projectDirectory) : undefined

@@ -8,6 +8,7 @@ import {
   batchPreflightView,
   computeBatchPlanHash,
   confirmManualPersona,
+  isId,
   makeExecutionPlan,
   planHash,
   preflightView,
@@ -45,11 +46,14 @@ import { validateWorkbookAtPath } from "./workbook-file";
 import {
   appendJob,
   clearCancel,
+  deriveSubmissionStatus,
   getJob,
+  getSubmission,
   isCancelRequested,
   listJobs,
   loadQueue,
   pendingArtifacts,
+  putSubmission,
   requestCancel,
   saveQueue,
   toSummary,
@@ -57,7 +61,8 @@ import {
   type JobMode,
   type JobSummary,
   type RunJob,
-  type StoredSampleResult
+  type StoredSampleResult,
+  type SubmissionRecord
 } from "./run-queue";
 
 export type FrozenArtifacts = {
@@ -553,102 +558,237 @@ export function renderDraftPreflight(projectDirectory: string) {
   };
 }
 
+function resolveSubmissionId(submissionId: string | undefined, prefix: string): string {
+  if (submissionId !== undefined && submissionId !== "") {
+    if (!isId(submissionId)) {
+      throw new Error("【送出】送出識別格式無效。請重新送出，不要連點建立第二批。");
+    }
+    return submissionId;
+  }
+  return slugId("sub", prefix);
+}
+
+function submissionResult(
+  record: SubmissionRecord,
+  duplicate: boolean,
+  snapshot: ProjectSnapshot | null
+) {
+  const stored = loadQueue().jobs.filter((job) => record.jobIds.includes(job.jobId));
+  return {
+    ok: record.status === "accepted" && !record.acceptError,
+    submissionId: record.submissionId,
+    submissionStatus: deriveSubmissionStatus(record, stored),
+    duplicate,
+    batchId: record.batchId,
+    batchPlanHash: record.planHash,
+    queuedCount: record.jobIds.length,
+    jobs: listJobs(record.projectDirectory),
+    snapshot,
+    error: record.acceptError
+  };
+}
+
+function readSnapshotIfPresent(projectDirectory: string): ProjectSnapshot | null {
+  try {
+    return readSnapshot(projectDirectory);
+  } catch {
+    return null;
+  }
+}
+
+async function replaySubmission(record: SubmissionRecord) {
+  if (record.acceptError || record.status === "failed") {
+    throw new Error(record.acceptError || "【送出】這個送出先前未被接受。請重新預覽後再送出。");
+  }
+  const snapshot = (await processQueue(record.projectDirectory)) ?? readSnapshotIfPresent(record.projectDirectory);
+  const latest = getSubmission(record.submissionId) ?? record;
+  return submissionResult(latest, true, snapshot);
+}
+
+function persistFailedSubmission(
+  input: Omit<SubmissionRecord, "acceptError" | "status" | "jobIds" | "batchId"> & {
+    batchId?: string | null;
+    jobIds?: string[];
+  },
+  error: unknown
+): never {
+  const message = error instanceof Error ? error.message : String(error);
+  putSubmission({
+    submissionId: input.submissionId,
+    projectDirectory: input.projectDirectory,
+    batchId: input.batchId ?? null,
+    jobIds: input.jobIds ?? [],
+    planHash: input.planHash,
+    mode: input.mode,
+    createdAt: input.createdAt,
+    acceptError: message,
+    status: "failed"
+  });
+  throw error instanceof Error ? error : new Error(message);
+}
+
 export async function enqueueBatchAndProcess(
   projectDirectory: string,
   batchPlanHash: string,
   acknowledgedDisclaimer: boolean,
-  mode: JobMode
+  mode: JobMode,
+  submissionId?: string
 ) {
-  const draft = drafts.get(projectDirectory);
-  if (!draft) {
-    throw new Error("【專案】目前沒有開啟的草稿。");
-  }
-  if (!acknowledgedDisclaimer) {
-    throw new Error("【Preflight】必須確認預測聲明才能排入佇列。");
-  }
-  const personas = draft.personas && draft.personas.length > 0 ? draft.personas : (draft.persona ? [draft.persona] : []);
-  if (personas.length === 0) {
-    throw new Error("【Persona】沒有已確認的 Persona。");
+  const resolvedId = resolveSubmissionId(submissionId, "batch");
+  const existingSubmission = getSubmission(resolvedId);
+  if (existingSubmission) {
+    return replaySubmission(existingSubmission);
   }
 
-  const existing = inspectProject(projectDirectory);
-  const reserved = pendingArtifacts(projectDirectory);
-  const existingRunIds = [...(existing?.runIds ?? []), ...reserved.runIds];
-  const existingReportIds = [...(existing?.reportIds ?? []), ...reserved.reportIds];
-  const projectId = existing?.projectId ?? draft.projectId;
-  const batchId = draft.batchId || slugId("batch", "simulation");
-
-  const builtPlans = personas.map((persona) => {
-    const runId = nextNumberedId(existingRunIds, `${projectId}-run`);
-    existingRunIds.push(runId);
-    const reportId = nextNumberedId(existingReportIds, `${projectId}-report`);
-    existingReportIds.push(reportId);
-    const built = buildPlanForPersona(draft, persona, runId, reportId);
-    return { persona, built };
+  const createdAt = nowIso();
+  putSubmission({
+    submissionId: resolvedId,
+    projectDirectory,
+    batchId: null,
+    jobIds: [],
+    planHash: batchPlanHash,
+    mode,
+    createdAt,
+    acceptError: null,
+    status: "accepting"
   });
 
-  const calculatedBatchHash = computeBatchPlanHash(
-    batchId,
-    builtPlans.map((b) => ({ personaId: b.persona.personaId, planHash: b.built.planHashValue }))
-  );
+  try {
+    const draft = drafts.get(projectDirectory);
+    if (!draft) {
+      throw new Error("【專案】目前沒有開啟的草稿。");
+    }
+    if (!acknowledgedDisclaimer) {
+      throw new Error("【Preflight】必須確認預測聲明才能排入佇列。");
+    }
+    const personas = draft.personas && draft.personas.length > 0 ? draft.personas : (draft.persona ? [draft.persona] : []);
+    if (personas.length === 0) {
+      throw new Error("【Persona】沒有已確認的 Persona。");
+    }
 
-  if (calculatedBatchHash !== batchPlanHash) {
-    throw new Error("【Preflight】批次執行計畫已變更。請重新整理 Preflight 後再送出。");
-  }
+    const existing = inspectProject(projectDirectory);
+    const reserved = pendingArtifacts(projectDirectory);
+    const existingRunIds = [...(existing?.runIds ?? []), ...reserved.runIds];
+    const existingReportIds = [...(existing?.reportIds ?? []), ...reserved.reportIds];
+    const projectId = existing?.projectId ?? draft.projectId;
+    const batchId = draft.batchId || slugId("batch", "simulation");
 
-  const enqueuedJobs: JobSummary[] = [];
-  for (const item of builtPlans) {
-    const approval = approvePreflight({
-      runId: item.built.runId,
-      plan: item.built.plan,
-      presentedPlanHash: item.built.planHashValue,
-      approvedAt: nowIso(),
-      acknowledgedDisclaimer: true,
-      realPersonReconfirmed: false
+    const builtPlans = personas.map((persona) => {
+      const runId = nextNumberedId(existingRunIds, `${projectId}-run`);
+      existingRunIds.push(runId);
+      const reportId = nextNumberedId(existingReportIds, `${projectId}-report`);
+      existingReportIds.push(reportId);
+      const built = buildPlanForPersona(draft, persona, runId, reportId);
+      return { persona, built };
     });
-    const job = appendJob({
-      jobId: slugId("job", `${batchId}-${item.persona.personaId}`),
+
+    const calculatedBatchHash = computeBatchPlanHash(
+      batchId,
+      builtPlans.map((b) => ({ personaId: b.persona.personaId, planHash: b.built.planHashValue }))
+    );
+
+    if (calculatedBatchHash !== batchPlanHash) {
+      throw new Error("【Preflight】批次執行計畫已變更。請重新整理 Preflight 後再送出。");
+    }
+
+    const enqueuedJobs: JobSummary[] = [];
+    for (const item of builtPlans) {
+      const approval = approvePreflight({
+        runId: item.built.runId,
+        plan: item.built.plan,
+        presentedPlanHash: item.built.planHashValue,
+        approvedAt: nowIso(),
+        acknowledgedDisclaimer: true,
+        realPersonReconfirmed: false
+      });
+      const job = appendJob({
+        jobId: slugId("job", `${batchId}-${item.persona.personaId}`),
+        projectDirectory,
+        projectId,
+        runId: item.built.runId,
+        reportId: item.built.reportId,
+        mode,
+        planHash: approval.planHash,
+        approval,
+        status: "queued",
+        createdAt: nowIso(),
+        startedAt: null,
+        completedAt: null,
+        error: null,
+        attempt: 1,
+        submissionId: resolvedId,
+        result: null,
+        request: {
+          title: draft.title,
+          sourceId: item.built.sourceId,
+          sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
+          personaRaw: item.persona.rawInput,
+          personaLabel: item.persona.label,
+          realPersonApplies: item.persona.review?.realPerson?.applies ?? false,
+          questions: draft.questions.map((q) => q.trim()).filter(Boolean),
+          persona: item.persona,
+          provider: draft.provider,
+          model: draft.model || defaultModelFor(draft.provider),
+          createdAt: draft.createdAt,
+          questionSet: item.built.questionSet,
+          sampleCount: item.built.plan.sampleCount
+        }
+      });
+      enqueuedJobs.push(job);
+    }
+
+    const record: SubmissionRecord = {
+      submissionId: resolvedId,
       projectDirectory,
-      projectId,
-      runId: item.built.runId,
-      reportId: item.built.reportId,
+      batchId,
+      jobIds: enqueuedJobs.map((job) => job.jobId),
+      planHash: batchPlanHash,
       mode,
-      planHash: approval.planHash,
-      approval,
-      status: "queued",
-      createdAt: nowIso(),
-      startedAt: null,
-      completedAt: null,
-      error: null,
-      attempt: 1,
-      result: null,
-      request: {
-        title: draft.title,
-        sourceId: item.built.sourceId,
-        sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
-        personaRaw: item.persona.rawInput,
-        personaLabel: item.persona.label,
-        realPersonApplies: item.persona.review?.realPerson?.applies ?? false,
-        questions: draft.questions.map((q) => q.trim()).filter(Boolean),
-        persona: item.persona,
-        provider: draft.provider,
-        model: draft.model || defaultModelFor(draft.provider),
-        createdAt: draft.createdAt,
-        questionSet: item.built.questionSet,
-        sampleCount: item.built.plan.sampleCount
-      }
-    });
-    enqueuedJobs.push(job);
+      createdAt,
+      acceptError: null,
+      status: "accepted"
+    };
+    putSubmission(record);
+    const snapshot = await processQueue(projectDirectory);
+    return submissionResult(getSubmission(resolvedId) ?? record, false, snapshot);
+  } catch (error) {
+    persistFailedSubmission(
+      {
+        submissionId: resolvedId,
+        projectDirectory,
+        planHash: batchPlanHash,
+        mode,
+        createdAt
+      },
+      error
+    );
   }
+}
 
-  const snapshot = await processQueue(projectDirectory);
+export function getSubmissionStatus(submissionId: string, projectDirectory?: string) {
+  if (!isId(submissionId)) {
+    throw new Error("【送出】送出識別格式無效。請重新送出，不要連點建立第二批。");
+  }
+  const record = getSubmission(submissionId);
+  if (!record || (projectDirectory && record.projectDirectory !== projectDirectory)) {
+    return {
+      found: false,
+      ok: false,
+      submissionId,
+      submissionStatus: null,
+      duplicate: false,
+      batchId: null,
+      queuedCount: 0,
+      jobs: [] as JobSummary[],
+      snapshot: null,
+      error: null
+    };
+  }
+  const jobs = listJobs(record.projectDirectory).filter((job) => record.jobIds.includes(job.jobId));
   return {
-    ok: true,
-    batchId,
-    batchPlanHash,
-    queuedCount: enqueuedJobs.length,
-    jobs: listJobs(projectDirectory),
-    snapshot
+    found: true,
+    ...submissionResult(record, false, readSnapshotIfPresent(record.projectDirectory)),
+    jobs
   };
 }
 
@@ -921,7 +1061,8 @@ export function enqueueRun(
   projectDirectory: string,
   presentedPlanHash: string,
   acknowledgedDisclaimer: boolean,
-  mode: JobMode
+  mode: JobMode,
+  submissionId?: string
 ): JobSummary {
   if (mode !== "mocked" && mode !== "live") {
     throw new Error("不支援的執行模式");
@@ -953,6 +1094,7 @@ export function enqueueRun(
     completedAt: null,
     error: null,
     attempt: 1,
+    submissionId,
     result: null,
     request: {
       title: draft.title,
@@ -1194,15 +1336,92 @@ export async function enqueueAndProcess(
   projectDirectory: string,
   presentedPlanHash: string,
   acknowledgedDisclaimer: boolean,
-  mode: JobMode
-): Promise<{ jobs: JobSummary[]; snapshot: ProjectSnapshot | null }> {
-  const enqueued = enqueueRun(projectDirectory, presentedPlanHash, acknowledgedDisclaimer, mode);
+  mode: JobMode,
+  submissionId?: string
+): Promise<{
+  jobs: JobSummary[];
+  snapshot: ProjectSnapshot | null;
+  ok: boolean;
+  submissionId: string;
+  submissionStatus: ReturnType<typeof deriveSubmissionStatus>;
+  duplicate: boolean;
+  batchId: string | null;
+  queuedCount: number;
+  error: string | null;
+}> {
+  const resolvedId = resolveSubmissionId(submissionId, "run");
+  const existingSubmission = getSubmission(resolvedId);
+  if (existingSubmission) {
+    return replaySubmission(existingSubmission);
+  }
+
+  const createdAt = nowIso();
+  putSubmission({
+    submissionId: resolvedId,
+    projectDirectory,
+    batchId: null,
+    jobIds: [],
+    planHash: presentedPlanHash,
+    mode,
+    createdAt,
+    acceptError: null,
+    status: "accepting"
+  });
+
+  let enqueued: JobSummary;
+  try {
+    enqueued = enqueueRun(
+      projectDirectory,
+      presentedPlanHash,
+      acknowledgedDisclaimer,
+      mode,
+      resolvedId
+    );
+    putSubmission({
+      submissionId: resolvedId,
+      projectDirectory,
+      batchId: null,
+      jobIds: [enqueued.jobId],
+      planHash: presentedPlanHash,
+      mode,
+      createdAt,
+      acceptError: null,
+      status: "accepted"
+    });
+  } catch (error) {
+    persistFailedSubmission(
+      {
+        submissionId: resolvedId,
+        projectDirectory,
+        planHash: presentedPlanHash,
+        mode,
+        createdAt
+      },
+      error
+    );
+  }
+
   const snapshot = await processQueue(projectDirectory);
   const completed = getJob(enqueued.jobId);
+  const record = getSubmission(resolvedId);
   if (completed && (completed.status === "failed" || completed.status === "partial")) {
     throw new Error(completed.error || "Job 執行失敗");
   }
-  return { jobs: listJobs(projectDirectory), snapshot };
+  return submissionResult(
+    record ?? {
+      submissionId: resolvedId,
+      projectDirectory,
+      batchId: null,
+      jobIds: [enqueued.jobId],
+      planHash: presentedPlanHash,
+      mode,
+      createdAt,
+      acceptError: null,
+      status: "accepted"
+    },
+    false,
+    snapshot
+  );
 }
 
 export async function retryAndProcess(

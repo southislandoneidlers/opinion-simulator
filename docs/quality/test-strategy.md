@@ -26,14 +26,18 @@ status includes a one-way fingerprint and fingerprint-bound `verifiedByUse`,
 never the key. Queue tests cover stale Preflight rejection, surfaced single-Job
 failures while batch processing continues, three-Sample resume/persistence,
 and exact-text Stability Comparison. Material IPC rejects PDF streams whose
-decompressed size exceeds the bounded limit.
+decompressed size exceeds the bounded limit. v0.4 increment 1 tests cover
+`queue.enqueue` / `queue.enqueueBatch` `submissionId` dedup (parallel and
+replay), missing-id rejection, `queue.submissionStatus` lookup without creating
+jobs, failed-accept replay, a new Preflight creating a new batch, legacy queue
+files without `submissions`, and Renderer submission-status copy.
 
 ## 中文閱讀摘要
 
-下一版新增驗收範圍見 [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)：
-OpenRouter transport／舊資料相容、同批同頁比較、聲明與 plan approval 分離、
-問題庫持久保存、並行送出防重及可見狀態。涉及畫面的需求須有 Renderer／GUI
-行為證據；2026-09-07 使用者「正常運作」回報不等於這些尚未實作的驗收已通過。
+下一版新增驗收範圍見 [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)。
+送出防重與可見狀態已有 IPC／session／Renderer 文案測試；OpenRouter、同批同頁、
+聲明分離與問題庫尚未實作。涉及畫面的需求仍須人工 GUI walkthrough；2026-09-07
+使用者「正常運作」回報不等於尚未實作項目已通過。
 
 這些測試不是在測「Excel 能不能打開」，而是在測系統會不會把不安全或格式錯誤的
 Workbook 誤當成可匯入資料。測試會確認合法的範本能讀出兩位 Persona，也會刻意

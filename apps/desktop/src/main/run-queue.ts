@@ -23,6 +23,14 @@ export const QUEUE_FILENAME = "run-queue.json";
 
 export type JobMode = "mocked" | "live";
 export type JobStatus = "queued" | "running" | "partial" | "completed" | "cancelled" | "failed";
+export type SubmissionAcceptStatus = "accepting" | "accepted" | "failed";
+export type SubmissionPhase =
+  | "accepted"
+  | "running"
+  | "completed"
+  | "partial"
+  | "failed"
+  | "submit_failed";
 
 export type JobRequest = {
   title: string;
@@ -64,9 +72,22 @@ export type RunJob = {
   completedAt: string | null;
   error: string | null;
   attempt: number;
+  submissionId?: string;
   /** A provider response saved before Project publication can be recovered without another call. */
   result: { samples: StoredSampleResult[] } | null;
   request: JobRequest;
+};
+
+export type SubmissionRecord = {
+  submissionId: string;
+  projectDirectory: string;
+  batchId: string | null;
+  jobIds: string[];
+  planHash: string;
+  mode: JobMode;
+  createdAt: string;
+  acceptError: string | null;
+  status: SubmissionAcceptStatus;
 };
 
 export type JobSummary = {
@@ -85,11 +106,13 @@ export type JobSummary = {
   completedAt: string | null;
   error: string | null;
   attempt: number;
+  submissionId: string | null;
 };
 
 export type RunQueue = {
   schemaVersion: string;
   jobs: RunJob[];
+  submissions: SubmissionRecord[];
 };
 
 let queueDirectory: string | null = null;
@@ -108,7 +131,7 @@ function queuePath(): string {
 }
 
 function emptyQueue(): RunQueue {
-  return { schemaVersion: QUEUE_SCHEMA_VERSION, jobs: [] };
+  return { schemaVersion: QUEUE_SCHEMA_VERSION, jobs: [], submissions: [] };
 }
 
 export function loadQueue(): RunQueue {
@@ -163,7 +186,27 @@ export function loadQueue(): RunQueue {
       throw new Error(`Run queue 含不完整條目（${path}）`);
     }
   }
-  return parsed as RunQueue;
+  const rawSubmissions = (queue as { submissions?: unknown }).submissions;
+  let submissions: SubmissionRecord[] = [];
+  if (rawSubmissions !== undefined) {
+    if (!Array.isArray(rawSubmissions)) {
+      throw new Error(`Run queue 檔案格式不符（${path}）；請手動檢查或備份後處理`);
+    }
+    for (const submission of rawSubmissions as SubmissionRecord[]) {
+      if (
+        !submission?.submissionId ||
+        typeof submission.projectDirectory !== "string" ||
+        !Array.isArray(submission.jobIds) ||
+        (submission.status !== "accepting" &&
+          submission.status !== "accepted" &&
+          submission.status !== "failed")
+      ) {
+        throw new Error(`Run queue 含不完整送出紀錄（${path}）`);
+      }
+    }
+    submissions = rawSubmissions as SubmissionRecord[];
+  }
+  return { ...(parsed as RunQueue), jobs: queue.jobs as RunJob[], submissions };
 }
 
 export function saveQueue(queue: RunQueue): void {
@@ -195,8 +238,47 @@ export function toSummary(job: RunJob): JobSummary {
     startedAt: job.startedAt,
     completedAt: job.completedAt,
     error: job.error,
-    attempt: job.attempt
+    attempt: job.attempt,
+    submissionId: job.submissionId ?? null
   };
+}
+
+export function getSubmission(submissionId: string): SubmissionRecord | undefined {
+  return loadQueue().submissions.find((item) => item.submissionId === submissionId);
+}
+
+export function putSubmission(record: SubmissionRecord): SubmissionRecord {
+  const queue = loadQueue();
+  const index = queue.submissions.findIndex((item) => item.submissionId === record.submissionId);
+  if (index >= 0) {
+    queue.submissions[index] = record;
+  } else {
+    queue.submissions.push(record);
+  }
+  persistQueue(queue);
+  return record;
+}
+
+export function deriveSubmissionStatus(
+  record: Pick<SubmissionRecord, "acceptError" | "status">,
+  jobs: Array<{ status: JobStatus }>
+): SubmissionPhase {
+  if (record.acceptError || record.status === "failed") {
+    return "submit_failed";
+  }
+  if (jobs.length === 0) {
+    return "accepted";
+  }
+  if (jobs.some((job) => job.status === "queued" || job.status === "running")) {
+    return jobs.every((job) => job.status === "queued") ? "accepted" : "running";
+  }
+  if (jobs.every((job) => job.status === "completed")) {
+    return "completed";
+  }
+  if (jobs.some((job) => job.status === "completed" || job.status === "partial")) {
+    return "partial";
+  }
+  return "failed";
 }
 
 export function listJobs(projectDirectory?: string): JobSummary[] {

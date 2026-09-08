@@ -7,6 +7,7 @@ import {
   QUEUE_FILENAME,
   appendJob,
   configureQueueDirectory,
+  deriveSubmissionStatus,
   listJobs,
   loadQueue,
   pendingArtifacts,
@@ -88,6 +89,16 @@ describe("run queue persistence", () => {
     const raw = readFileSync(join(directory, QUEUE_FILENAME), "utf8");
     expect(raw).not.toMatch(/apiKey|GEMINI_API_KEY|OPENAI_API_KEY/i);
     expect(pendingArtifacts("/tmp/project").runIds).toEqual(["run-001"]);
+    expect(loadQueue().submissions).toEqual([]);
+  });
+
+  it("loads a legacy queue file that has jobs but no submissions array", () => {
+    const path = join(directory, QUEUE_FILENAME);
+    const job = makeJob("run-legacy");
+    writeFileSync(path, JSON.stringify({ schemaVersion: "0.0", jobs: [job] }), "utf8");
+    const loaded = loadQueue();
+    expect(loaded.jobs).toHaveLength(1);
+    expect(loaded.submissions).toEqual([]);
   });
 
   it("refuses a corrupt queue file instead of rewriting it", () => {
@@ -97,5 +108,38 @@ describe("run queue persistence", () => {
     expect(readFileSync(path, "utf8")).toBe("{not-json");
     writeFileSync(path, JSON.stringify({ schemaVersion: "9.9", jobs: [] }), "utf8");
     expect(() => loadQueue()).toThrow(/格式不符/);
+  });
+
+  it("derives submission phases from accept errors and job statuses", () => {
+    expect(
+      deriveSubmissionStatus({ acceptError: "stale", status: "failed" }, [])
+    ).toBe("submit_failed");
+    expect(
+      deriveSubmissionStatus({ acceptError: null, status: "accepted" }, [{ status: "queued" }])
+    ).toBe("accepted");
+    expect(
+      deriveSubmissionStatus({ acceptError: null, status: "accepted" }, [
+        { status: "queued" },
+        { status: "running" }
+      ])
+    ).toBe("running");
+    expect(
+      deriveSubmissionStatus({ acceptError: null, status: "accepted" }, [
+        { status: "completed" },
+        { status: "completed" }
+      ])
+    ).toBe("completed");
+    expect(
+      deriveSubmissionStatus({ acceptError: null, status: "accepted" }, [
+        { status: "completed" },
+        { status: "failed" }
+      ])
+    ).toBe("partial");
+    expect(
+      deriveSubmissionStatus({ acceptError: null, status: "accepted" }, [
+        { status: "failed" },
+        { status: "cancelled" }
+      ])
+    ).toBe("failed");
   });
 });

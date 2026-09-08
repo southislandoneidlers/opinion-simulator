@@ -10,10 +10,10 @@ calls.
 ## Controls
 
 Planned v0.4 changes are defined in
-[v0.4 使用回饋改進規格](../product/v04-usability-improvements.md): isolate
-OpenRouter credentials and destination from legacy OpenAI, preserve exact-plan
-approval independently of disclaimer acknowledgement, and deduplicate submission
-intents in Main/queue. These controls are requirements, not current guarantees.
+[v0.4 使用回饋改進規格](../product/v04-usability-improvements.md). Submission
+intents are now deduplicated in Main/queue by `submissionId`; OpenRouter
+credential isolation and separating disclaimer acknowledgement from exact-plan
+approval remain unimplemented.
 
 - Credentials only in macOS Keychain / Windows Credential Manager; the v0.1
   opt-in exception (a main-process environment variable) remains as fallback.

@@ -10,6 +10,7 @@ describe("IPC allow-list and secret-shaped keys", () => {
   it("accepts published channels and rejects unknown ones", () => {
     expect(isIpcChannel("desktop.ping")).toBe(true);
     expect(isIpcChannel("queue.enqueue")).toBe(true);
+    expect(isIpcChannel("queue.submissionStatus")).toBe(true);
     expect(isIpcChannel("desktop.chooseWorkbook")).toBe(true);
     expect(isIpcChannel("workbook.validate")).toBe(true);
     expect(isIpcChannel("credential.load")).toBe(false);

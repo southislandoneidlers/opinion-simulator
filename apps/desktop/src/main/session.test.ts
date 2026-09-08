@@ -447,6 +447,20 @@ describe("persistent run queue", () => {
     );
     expect(snapshot?.runIds).toEqual([second.runId]);
   });
+
+  it("returns the same Job when enqueueAndProcess is called twice with one submissionId", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-sub-dedup-"));
+    prepareDraft(projectDirectory);
+    const planHash = currentPlanHash(projectDirectory);
+    const [first, second] = await Promise.all([
+      enqueueAndProcess(projectDirectory, planHash, true, "mocked", "sub-single-001"),
+      enqueueAndProcess(projectDirectory, planHash, true, "mocked", "sub-single-001")
+    ]);
+    expect(listQueuedJobs(projectDirectory)).toHaveLength(1);
+    expect(first.jobs.map((job) => job.jobId)).toEqual(second.jobs.map((job) => job.jobId));
+    expect(first.submissionId).toBe("sub-single-001");
+    expect(second.duplicate).toBe(true);
+  });
 });
 
 describe("workbook draft import", () => {

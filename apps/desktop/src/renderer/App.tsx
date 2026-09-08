@@ -1,4 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createSubmissionId,
+  isSubmissionInFlight,
+  isSubmissionTerminal,
+  submissionStatusText,
+  submissionStatusTone,
+  type SubmissionPhase
+} from "./submission-status";
 
 type Stage = "overview" | "settings" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
 
@@ -26,6 +34,19 @@ type JobSummary = {
   model: string;
   error: string | null;
   attempt: number;
+  submissionId?: string | null;
+};
+
+type SubmissionEnqueueResponse = {
+  ok: boolean;
+  found?: boolean;
+  submissionId: string;
+  submissionStatus: Exclude<SubmissionPhase, "idle" | "submitting"> | null;
+  duplicate: boolean;
+  queuedCount: number;
+  jobs: JobSummary[];
+  snapshot: Record<string, unknown> | null;
+  error: string | null;
 };
 
 type LibraryEntry = {
@@ -107,6 +128,9 @@ export function App() {
   const [selectedPersonaVersionIds, setSelectedPersonaVersionIds] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [workbookCheck, setWorkbookCheck] = useState<WorkbookCheck | null>(null);
+  const [submitPhase, setSubmitPhase] = useState<SubmissionPhase>("idle");
+  const activeSubmissionId = useRef<string | null>(null);
+  const submitInFlight = useRef(false);
 
   const api = window.opinionSimulator;
   const providerModels = providerMetadata?.[provider].models ?? [];
@@ -520,12 +544,51 @@ export function App() {
     if (!view) {
       return;
     }
+    activeSubmissionId.current = null;
+    submitInFlight.current = false;
+    setSubmitPhase("idle");
     setPreflight(view);
     setDisclaimer(false);
     setStage("preflight");
   }
 
+  function applySubmissionResult(next: SubmissionEnqueueResponse, mode: "mocked" | "live") {
+    const phase: SubmissionPhase = next.submissionStatus ?? (next.ok ? "accepted" : "submit_failed");
+    setSubmitPhase(phase);
+    submitInFlight.current = isSubmissionInFlight(phase);
+    if (phase !== "submit_failed" && isSubmissionTerminal(phase)) {
+      activeSubmissionId.current = null;
+    }
+    if (next.jobs) {
+      setJobs(next.jobs);
+    }
+    const label = submissionStatusText(phase, next.error);
+    if (phase === "completed" && next.snapshot) {
+      setSnapshot(next.snapshot);
+      setPreflight(null);
+      setDisclaimer(false);
+      setStage("results");
+      setStatus(
+        mode === "mocked"
+          ? `${label}${next.queuedCount > 1 ? `（共 ${next.queuedCount} 個 Persona Job）` : ""}`
+          : `${label}${next.queuedCount > 1 ? `（共 ${next.queuedCount} 個 Persona Job）` : ""}`
+      );
+      return;
+    }
+    if (phase === "accepted" || phase === "running") {
+      setStage("queue");
+    }
+    if (phase === "submit_failed") {
+      setStatus(label);
+      return;
+    }
+    setStatus(label);
+  }
+
   async function run(mode: "mocked" | "live") {
+    if (submitInFlight.current || isSubmissionInFlight(submitPhase)) {
+      return;
+    }
     if (!disclaimer) {
       setStatus("【Preflight】尚未承認預測聲明。請到「Preflight」頁勾選「我承認這是 AI 模擬，不是真實引言」。");
       return;
@@ -540,82 +603,61 @@ export function App() {
       return;
     }
 
-    if (preflight.isBatch) {
-      const batchHash = preflight.batchPlanHash;
-      if (typeof batchHash !== "string") {
-        setStatus("【Preflight】無法取得批次計畫雜湊。請到「Preflight」頁重新產生預覽。");
-        return;
-      }
-      const next = await invoke<{
-        ok: boolean;
-        queuedCount: number;
-        batchId: string;
-        jobs: JobSummary[];
-        snapshot: Record<string, unknown> | null;
-      }>("queue.enqueueBatch", {
-        projectDirectory: directory,
-        batchPlanHash: batchHash,
-        acknowledgedDisclaimer: true,
-        mode
-      });
-      if (!next) {
-        await refreshJobs();
-        return;
-      }
-      setJobs(next.jobs);
-      if (next.snapshot) {
-        setSnapshot(next.snapshot);
-        setPreflight(null);
-        setDisclaimer(false);
-        if (mode === "live") await refreshCredential();
-        setStage("results");
-        setStatus(
-          mode === "mocked"
-            ? `批次模擬完成（共 ${next.queuedCount} 個 Persona Job）。`
-            : `批次 Live 完成（共 ${next.queuedCount} 個 Persona Job）。`
-        );
-        return;
-      }
-      setStage("queue");
+    const isBatch = Boolean(preflight.isBatch);
+    const planHash = isBatch ? preflight.batchPlanHash : preflight.planHash;
+    if (typeof planHash !== "string") {
       setStatus(
-        mode === "mocked"
-          ? `批次模擬佇列已啟動（共 ${next.queuedCount} 個 Persona Job）。`
-          : `批次 Live 佇列已啟動（共 ${next.queuedCount} 個 Persona Job）。`
+        isBatch
+          ? "【Preflight】無法取得批次計畫雜湊。請到「Preflight」頁重新產生預覽。"
+          : "【Preflight】無法取得目前計畫。請到「Preflight」頁重新產生預覽。"
       );
       return;
     }
 
-    const nextHash = preflight.planHash;
-    if (typeof nextHash !== "string") {
-      setStatus("【Preflight】無法取得目前計畫。請到「Preflight」頁重新產生預覽。");
-      return;
+    if (!activeSubmissionId.current) {
+      activeSubmissionId.current = createSubmissionId();
     }
-    const next = await invoke<{ jobs: JobSummary[]; snapshot: Record<string, unknown> | null }>(
-      "queue.enqueue",
-      {
-        projectDirectory: directory,
-        planHash: nextHash,
-        acknowledgedDisclaimer: true,
-        mode
-      }
-    );
+    const submissionId = activeSubmissionId.current;
+    submitInFlight.current = true;
+    setSubmitPhase("submitting");
+    setStatus("送出中");
+
+    const payload = isBatch
+      ? {
+          projectDirectory: directory,
+          batchPlanHash: planHash,
+          acknowledgedDisclaimer: true,
+          mode,
+          submissionId
+        }
+      : {
+          projectDirectory: directory,
+          planHash,
+          acknowledgedDisclaimer: true,
+          mode,
+          submissionId
+        };
+    const channel = isBatch ? "queue.enqueueBatch" : "queue.enqueue";
+    let next = await invoke<SubmissionEnqueueResponse>(channel, payload);
     if (!next) {
-      await refreshJobs();
-      return;
+      const recovered = await invoke<SubmissionEnqueueResponse>("queue.submissionStatus", {
+        submissionId,
+        projectDirectory: directory
+      });
+      if (recovered?.found) {
+        next = recovered;
+      } else {
+        setSubmitPhase("submit_failed");
+        submitInFlight.current = false;
+        setStatus("送出失敗。接受狀態不明，已查詢既有送出，沒有建立新批次。");
+        await refreshJobs();
+        return;
+      }
     }
-    setJobs(next.jobs);
-    if (next.snapshot) {
-      setSnapshot(next.snapshot);
-      setPreflight(null);
-      setDisclaimer(false);
-      if (mode === "live") await refreshCredential();
-      setStage("results");
-      setStatus(
-        mode === "mocked"
-          ? "模擬 Run 完成。下一筆 Run 需要重新產生並檢視 Preflight。"
-          : "Live Run 完成。下一筆 Run 需要重新產生並檢視 Preflight。"
-      );
+    if (mode === "live" && next.snapshot) {
+      await refreshCredential();
     }
+    applySubmissionResult(next, mode);
   }
 
 
@@ -958,7 +1000,11 @@ export function App() {
                 <input value={model} onChange={(event) => setModel(event.target.value)} />
               </label>
             ) : null}
-            <button className="primary" disabled={!ready || !providerMetadata} onClick={() => void run("mocked")}>
+            <button
+              className="primary"
+              disabled={!ready || !providerMetadata || isSubmissionInFlight(submitPhase)}
+              onClick={() => void run("mocked")}
+            >
               模擬 Run（不呼叫模型）
             </button>
             <p>
@@ -967,11 +1013,23 @@ export function App() {
                 : `未偵測到 ${providerLabel(provider)} 憑證。請在下方「設定」貼上 API key 並按儲存，確認出現「已安全儲存」。`}
             </p>
             <button
-              disabled={!ready || !providerMetadata || !credentialState[provider].available}
+              disabled={
+                !ready ||
+                !providerMetadata ||
+                !credentialState[provider].available ||
+                isSubmissionInFlight(submitPhase)
+              }
               onClick={() => void run("live")}
             >
               Live {providerLabel(provider)} Run（{model || defaultModel(provider)}）
             </button>
+            <p
+              className={`submit-status submit-status-${submissionStatusTone(submitPhase)}`}
+              role="status"
+              aria-live="polite"
+            >
+              {submitPhase === "idle" ? "" : submissionStatusText(submitPhase)}
+            </p>
             {jobs.filter((job) => !directory || job.projectDirectory === directory).length > 0 ? (
               <>
                 <h2>Queue</h2>

@@ -1,6 +1,7 @@
 # v0.4 使用回饋改進規格
 
-狀態：2026-09-07 使用者確認五項改進方向；本文件是下一版需求，尚未實作。
+狀態：2026-09-07 使用者確認五項改進方向。
+2026-09-08：增量 1（送出提示與防止重複送出）已實作；增量 2–5 尚未實作。
 使用者回報目前實測正常運作，但沒有提供完整測試矩陣；不據此宣告跨平台、
 所有 provider 或所有 v0.3 exit criteria 均已驗收。
 
@@ -107,10 +108,23 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
   重啟／回應遺失後狀態可確認、明確新送出可建立新批次。Gemini、OpenRouter、
   mocked 與 live UI 使用相同行為。
 
+### 實作狀態（2026-09-08）
+
+- IPC `queue.enqueue` 與 `queue.enqueueBatch` 必須帶有效 `submissionId`。
+  同一識別的重複請求回傳既有 Jobs，不建立第二批。
+- 新增 `queue.submissionStatus`：查詢既有送出；找不到時不建立 Jobs。
+- `run-queue.json` 可選 `submissions` 陣列；舊檔沒有此欄仍可讀、不改寫。
+- Renderer 在執行按鈕旁顯示文字狀態（`role="status"`），送出中鎖定按鈕；
+  新 Preflight 才開始新的送出識別。回應遺失時先查 `queue.submissionStatus`。
+- 自動測試覆蓋並行／重送防重、缺識別拒絕、接受失敗重放、新預覽後新批次、
+  以及 Renderer 狀態文案。尚未做人工 GUI walkthrough 或真實 provider 呼叫。
+  OpenRouter 路徑尚未存在；現有 mocked 與 Gemini／OpenAI live enqueue 共用
+  同一套 submission IPC。
+
 ## 實作順序與驗證入口
 
 建議順序：送出防重與明顯狀態 → Preflight 聲明分離 → 批次同頁比較 → 問題庫
-→ OpenRouter 遷移。優先解決可能造成重複請求的問題，批次關聯可供結果頁重用。
+→ OpenRouter 遷移。增量 1 已完成。下一個增量是 Preflight 聲明與精確計畫核准分離。
 
 沿用公開 IPC／session／queue、provider adapter 及 Project 讀寫 seam；
 互動需求須增加 Renderer 行為驗證與人工 walkthrough，不能僅靠 Main 測試宣告完成。
@@ -119,6 +133,6 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ## 範圍外
 
-本次只記錄下一版規格，沒有實作功能、清空測試 Project、改憑證、做真實模型呼叫
-或執行 Git 寫入。問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
+2026-09-07 記錄規格時未實作功能。增量 1 已於 2026-09-08 實作，見第 5 節。
+問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
 OpenRouter 遷移不包含任意自訂 API gateway。既有 v0.4 匯出等項目不因本文件被取消。
