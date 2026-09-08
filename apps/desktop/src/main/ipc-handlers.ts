@@ -22,6 +22,7 @@ import {
   openSnapshot,
   ping,
   renderDraftPreflight,
+  setDraftDisclaimer,
   resumeAndProcess,
   retryAndProcess,
   runLive,
@@ -88,6 +89,8 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
       return selectDraftPersonas(String(payload.projectDirectory ?? ""), ids);
     },
     "preflight.render": (payload) => renderDraftPreflight(String(payload.projectDirectory ?? "")),
+    "preflight.setDisclaimer": (payload) =>
+      setDraftDisclaimer(String(payload.projectDirectory ?? ""), Boolean(payload.acknowledged)),
     "run.mocked": (payload) =>
       runMocked(
         String(payload.projectDirectory ?? ""),

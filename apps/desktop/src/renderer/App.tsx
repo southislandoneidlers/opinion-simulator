@@ -203,12 +203,17 @@ export function App() {
       questions: string[];
       provider?: ProviderId;
       model?: string;
+      disclaimerAcknowledged?: boolean;
     }>("project.create", { projectDirectory: path, title: projectTitle });
     if (created === null) {
       setDirectory("");
+      setDisclaimer(false);
+      setPreflight(null);
       return false;
     }
     setDirectory(path);
+    setDisclaimer(Boolean(created.disclaimerAcknowledged));
+    setPreflight(null);
     setRecoverableNotice(null);
     if (created.openedExisting) {
       setTitle(created.title || projectTitle);
@@ -316,7 +321,6 @@ export function App() {
     setPersonaLabel(selected.personaLabel);
     setPersonaRaw(selected.personaRaw);
     setPreflight(null);
-    setDisclaimer(false);
     setStatus(`已選用 ${selected.personas.length} 個已確認的 Persona Version；請重新產生 Preflight。`);
   }
 
@@ -478,7 +482,6 @@ export function App() {
     setPersonaRaw(res.personaRaw);
     setPersonaLabel(res.personaLabel);
     setPreflight(null);
-    setDisclaimer(false);
     setStatus(
       `已匯入批次 ${res.batchId}：包含 ${res.personaCount} 位 Persona、${res.questionCount} 題問題（樣本數 ${res.sampleCount}）。請先在 Persona 頁明確確認這批 Persona，之後才會建立 Preflight。`
     );
@@ -526,7 +529,6 @@ export function App() {
       return;
     }
     setPreflight(null);
-    setDisclaimer(false);
     await refreshLibrary();
     setStatus(
       library?.settings.autoSave
@@ -548,8 +550,24 @@ export function App() {
     submitInFlight.current = false;
     setSubmitPhase("idle");
     setPreflight(view);
-    setDisclaimer(false);
+    if (typeof view.disclaimerAcknowledged === "boolean") {
+      setDisclaimer(view.disclaimerAcknowledged);
+    }
     setStage("preflight");
+  }
+
+  async function setDisclaimerChecked(acknowledged: boolean) {
+    if (!directory) {
+      setStatus("【專案】請先選擇或開啟專案資料夾。");
+      return;
+    }
+    const next = await invoke<{ disclaimerAcknowledged: boolean }>("preflight.setDisclaimer", {
+      projectDirectory: directory,
+      acknowledged
+    });
+    if (next) {
+      setDisclaimer(next.disclaimerAcknowledged);
+    }
   }
 
   function applySubmissionResult(next: SubmissionEnqueueResponse, mode: "mocked" | "live") {
@@ -566,7 +584,6 @@ export function App() {
     if (phase === "completed" && next.snapshot) {
       setSnapshot(next.snapshot);
       setPreflight(null);
-      setDisclaimer(false);
       setStage("results");
       setStatus(
         mode === "mocked"
@@ -948,13 +965,19 @@ export function App() {
         {stage === "preflight" && (
           <section className="card">
             <h1>Preflight</h1>
-            <p>送出前逐項確認：外傳材料、Persona、問題、模型與目的地。確認無誤後再勾選底部聲明並前往「執行」。</p>
+            <p>
+              送出前逐項確認：外傳材料、Persona、問題、模型與目的地。預測聲明在本專案工作階段只需勾選一次；更換計畫後要重新產生預覽，切換專案或重啟後要重新勾選聲明。
+            </p>
             <button className="primary" onClick={() => void renderPreflight()}>
               產生目前計畫預覽
             </button>
             {preflight ? <PreflightReport data={preflight} /> : null}
             <label className="disclaimer-check">
-              <input type="checkbox" checked={disclaimer} onChange={(event) => setDisclaimer(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={disclaimer}
+                onChange={(event) => void setDisclaimerChecked(event.target.checked)}
+              />
               我承認這是 AI 模擬的預測，不是真實引言
             </label>
           </section>

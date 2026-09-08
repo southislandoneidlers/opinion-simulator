@@ -100,6 +100,40 @@ export function defaultModelFor(provider: ProviderId): string {
 
 const drafts = new Map<string, DraftState>();
 
+let sessionDisclaimer: { projectDirectory: string; acknowledged: boolean } | null = null;
+
+function bindDisclaimerSession(projectDirectory: string): void {
+  if (sessionDisclaimer?.projectDirectory !== projectDirectory) {
+    sessionDisclaimer = { projectDirectory, acknowledged: false };
+  }
+}
+
+export function setDraftDisclaimer(
+  projectDirectory: string,
+  acknowledged: boolean
+): { disclaimerAcknowledged: boolean } {
+  if (!drafts.has(projectDirectory)) {
+    throw new Error("【專案】目前沒有開啟的草稿。請先到「總覽」選擇專案資料夾。");
+  }
+  if (sessionDisclaimer?.projectDirectory !== projectDirectory) {
+    throw new Error("【Preflight】預測聲明只適用於目前開啟的專案。切換專案後請重新勾選。");
+  }
+  sessionDisclaimer.acknowledged = Boolean(acknowledged);
+  return { disclaimerAcknowledged: sessionDisclaimer.acknowledged };
+}
+
+export function isDisclaimerAcknowledged(projectDirectory: string): boolean {
+  return sessionDisclaimer?.projectDirectory === projectDirectory && sessionDisclaimer.acknowledged;
+}
+
+function requireAcknowledgedDisclaimer(projectDirectory: string, acknowledgedDisclaimer: boolean): void {
+  if (!isDisclaimerAcknowledged(projectDirectory) || !acknowledgedDisclaimer) {
+    throw new Error(
+      "【Preflight】尚未承認預測聲明。請到「Preflight」頁勾選「我承認這是 AI 模擬，不是真實引言」。"
+    );
+  }
+}
+
 function nowIso(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -124,6 +158,7 @@ export function createDraft(projectDirectory: string, title: string): DraftState
     frozenArtifacts: null
   };
   drafts.set(projectDirectory, draft);
+  bindDisclaimerSession(projectDirectory);
   return draft;
 }
 
@@ -138,7 +173,7 @@ function hasUnpublishedBatch(draft: DraftState): boolean {
 export function openOrCreateDraft(
   projectDirectory: string,
   title: string
-): DraftState & { openedExisting: boolean } {
+): DraftState & { openedExisting: boolean; disclaimerAcknowledged: boolean } {
   const kind = classifyWriteTarget(projectDirectory);
   if (kind === "occupied") {
     throw new Error(
@@ -147,13 +182,15 @@ export function openOrCreateDraft(
   }
   const current = drafts.get(projectDirectory);
   if (current && (kind === "empty" || kind === "absent")) {
+    bindDisclaimerSession(projectDirectory);
     saveLastProjectMemory({ projectDirectory });
-    return { ...current, openedExisting: false };
+    return { ...current, openedExisting: false, disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory) };
   }
   if (kind === "project") {
     if (current && hasUnpublishedBatch(current)) {
+      bindDisclaimerSession(projectDirectory);
       saveLastProjectMemory({ projectDirectory });
-      return { ...current, openedExisting: true };
+      return { ...current, openedExisting: true, disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory) };
     }
     const existing = inspectProject(projectDirectory);
     const snapshot = readSnapshot(projectDirectory);
@@ -180,12 +217,13 @@ export function openOrCreateDraft(
       frozenArtifacts: null
     };
     drafts.set(projectDirectory, draft);
+    bindDisclaimerSession(projectDirectory);
     saveLastProjectMemory({ projectDirectory });
-    return { ...draft, openedExisting: true };
+    return { ...draft, openedExisting: true, disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory) };
   }
   const created = createDraft(projectDirectory, title);
   saveLastProjectMemory({ projectDirectory });
-  return { ...created, openedExisting: false };
+  return { ...created, openedExisting: false, disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory) };
 }
 
 export function saveDraft(input: Partial<DraftState> & { projectDirectory: string }): DraftState {
@@ -536,6 +574,7 @@ export function renderDraftPreflight(projectDirectory: string) {
 
     return {
       isBatch: true,
+      disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory),
       ...batchPreflightView({
         batchId: draft.batchId || slugId("batch", "simulation"),
         sourceId: resolveSourceId(draft, existing),
@@ -554,6 +593,7 @@ export function renderDraftPreflight(projectDirectory: string) {
   const { plan, runId } = buildPlan(draft);
   return {
     isBatch: false,
+    disclaimerAcknowledged: isDisclaimerAcknowledged(projectDirectory),
     ...preflightView(plan, nowIso(), runId)
   };
 }
@@ -658,9 +698,7 @@ export async function enqueueBatchAndProcess(
     if (!draft) {
       throw new Error("【專案】目前沒有開啟的草稿。");
     }
-    if (!acknowledgedDisclaimer) {
-      throw new Error("【Preflight】必須確認預測聲明才能排入佇列。");
-    }
+    requireAcknowledgedDisclaimer(projectDirectory, acknowledgedDisclaimer);
     const personas = draft.personas && draft.personas.length > 0 ? draft.personas : (draft.persona ? [draft.persona] : []);
     if (personas.length === 0) {
       throw new Error("【Persona】沒有已確認的 Persona。");
@@ -911,6 +949,7 @@ export async function runMocked(
       "【Persona】尚未確認 Persona Version。請到「Persona」頁輸入背景後按「確認 Persona Version」。"
     );
   }
+  requireAcknowledgedDisclaimer(projectDirectory, acknowledgedDisclaimer);
   const approved = approveBuiltPlan(
     draft,
     buildPlan(draft),
@@ -950,6 +989,7 @@ export async function runLive(
       "【Persona】尚未確認 Persona Version。請到「Persona」頁輸入背景後按「確認 Persona Version」。"
     );
   }
+  requireAcknowledgedDisclaimer(projectDirectory, acknowledgedDisclaimer);
   const approved = approveBuiltPlan(
     draft,
     buildPlan(draft),
@@ -1073,6 +1113,7 @@ export function enqueueRun(
       "【Persona】尚未確認 Persona Version。請到「Persona」頁輸入背景後按「確認 Persona Version」。"
     );
   }
+  requireAcknowledgedDisclaimer(projectDirectory, acknowledgedDisclaimer);
   const built = approveBuiltPlan(
     draft,
     buildPlan(draft),

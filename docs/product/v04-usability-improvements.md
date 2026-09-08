@@ -1,7 +1,7 @@
 # v0.4 使用回饋改進規格
 
 狀態：2026-09-07 使用者確認五項改進方向。
-2026-09-08：增量 1（送出提示與防止重複送出）已實作；增量 2–5 尚未實作。
+2026-09-08：增量 1（送出提示與防止重複送出）與增量 2（Preflight 聲明分離）已實作；增量 3–5 尚未實作。
 使用者回報目前實測正常運作，但沒有提供完整測試矩陣；不據此宣告跨平台、
 所有 provider 或所有 v0.3 exit criteria 均已驗收。
 
@@ -79,6 +79,18 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 - 驗收：先勾後預覽保持勾選、預覽失敗不可送出、變更計畫拒絕舊 hash、
   新 Run 需新預覽、切換 Project／重啟重設聲明。
 
+### 實作狀態（2026-09-08）
+
+- 預測聲明存在 Main 記憶體工作階段，不寫入 Project 或 app-data。
+- IPC `preflight.setDisclaimer` 設定勾選；`preflight.render` 與 `project.create`
+  回傳 `disclaimerAcknowledged`。產生預覽、改材料／Persona／問題、完成 Run
+  都不重設勾選。
+- 切換目前開啟的 Project 會重設聲明。重啟 App 也重設，因為沒有持久設定。
+- 送出仍要工作階段已勾選、payload `acknowledgedDisclaimer`、以及目前計畫
+  hash。勾選本身不建立 Job 或 plan approval。
+- 自動測試覆蓋保持勾選、勾選不核准、切換 Project 重設、未勾選拒絕送出。
+  尚未做人工 GUI walkthrough。
+
 ## 4. 本機問題庫
 
 - 在「問題」頁加入問題庫，支援具名稱的單題及多題問題集，保存題目文字與順序。
@@ -124,7 +136,7 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 ## 實作順序與驗證入口
 
 建議順序：送出防重與明顯狀態 → Preflight 聲明分離 → 批次同頁比較 → 問題庫
-→ OpenRouter 遷移。增量 1 已完成。下一個增量是 Preflight 聲明與精確計畫核准分離。
+→ OpenRouter 遷移。增量 1 與增量 2 已完成。下一個增量是同次送出結果同頁比較。
 
 沿用公開 IPC／session／queue、provider adapter 及 Project 讀寫 seam；
 互動需求須增加 Renderer 行為驗證與人工 walkthrough，不能僅靠 Main 測試宣告完成。
@@ -133,6 +145,6 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ## 範圍外
 
-2026-09-07 記錄規格時未實作功能。增量 1 已於 2026-09-08 實作，見第 5 節。
+2026-09-07 記錄規格時未實作功能。增量 1 與增量 2 已於 2026-09-08 實作，見第 5、3 節。
 問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
 OpenRouter 遷移不包含任意自訂 API gateway。既有 v0.4 匯出等項目不因本文件被取消。

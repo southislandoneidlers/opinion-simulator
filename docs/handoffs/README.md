@@ -10,6 +10,7 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-09-08 | v0.4 增量 2：Preflight 聲明分離 | Complete; tests + full build | [2026-09-08-v04-preflight-disclaimer.md](2026-09-08-v04-preflight-disclaimer.md) |
 | 2026-09-08 | v0.4 增量 1：送出狀態與防重 | Complete; tests + full build | [2026-09-08-v04-submission-dedup.md](2026-09-08-v04-submission-dedup.md) |
 | 2026-09-07 | v0.4 使用回饋與五項改進計畫 | 規格已記錄；尚未實作 | [2026-09-07-v04-usability-feedback.md](2026-09-07-v04-usability-feedback.md) |
 | 2026-09-03 | v0.3 code-review remediation | Complete; 161 tests + full build | [2026-09-03-v03-review-remediation.md](2026-09-03-v03-review-remediation.md) |

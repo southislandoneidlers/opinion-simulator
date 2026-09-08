@@ -11,9 +11,10 @@ calls.
 
 Planned v0.4 changes are defined in
 [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md). Submission
-intents are now deduplicated in Main/queue by `submissionId`; OpenRouter
-credential isolation and separating disclaimer acknowledgement from exact-plan
-approval remain unimplemented.
+intents are deduplicated in Main/queue by `submissionId`. Disclaimer
+acknowledgement is a process-memory Project-session flag and does not by
+itself authorize a provider call; exact-plan hash approval remains required.
+OpenRouter credential isolation remains unimplemented.
 
 - Credentials only in macOS Keychain / Windows Credential Manager; the v0.1
   opt-in exception (a main-process environment variable) remains as fallback.

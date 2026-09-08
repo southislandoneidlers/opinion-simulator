@@ -3,9 +3,10 @@
 Freely navigable stages; gates enforce safety, not navigation order.
 
 Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
-defines the confirmed 2026-09-07 changes. Visible submission status and
-Main-side duplicate-submit prevention are implemented. Batch comparison,
-disclaimer retention, question reuse, and OpenRouter remain unimplemented.
+defines the confirmed 2026-09-07 changes. Visible submission status,
+Main-side duplicate-submit prevention, and session disclaimer retention are
+implemented. Batch comparison, question reuse, and OpenRouter remain
+unimplemented.
 
 Stages:
 
@@ -64,3 +65,12 @@ Stages:
   technology. Buttons stay disabled while a submission is in flight.
 - If the enqueue response is lost, the App queries `queue.submissionStatus`
   before creating another batch.
+
+## Implemented v0.4 increment 2 workspace behavior
+
+- The prediction-disclaimer checkbox is a Project-session flag in Main. It
+  survives Preflight regeneration, draft edits, stage changes, and a completed
+  Run. It does not write to the Project or app-data.
+- Switching Project or restarting the App clears the checkbox. Checking it
+  does not enqueue a Job or mint a plan approval; submit still requires a
+  current preview hash.

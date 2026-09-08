@@ -9,6 +9,8 @@ import {
   createDraft,
   enqueueAndProcess,
   enqueueRun,
+  isDisclaimerAcknowledged,
+  setDraftDisclaimer,
   importWorkbookToDraft,
   listQueuedJobs,
   openOrCreateDraft,
@@ -36,7 +38,10 @@ function configureSessionStores(): void {
   configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-last-project-session-")));
 }
 
-function prepareDraft(projectDirectory: string): void {
+function prepareDraft(
+  projectDirectory: string,
+  options: { acknowledgeDisclaimer?: boolean } = {}
+): void {
   createDraft(projectDirectory, "桌面模擬");
   saveDraft({
     projectDirectory,
@@ -46,6 +51,9 @@ function prepareDraft(projectDirectory: string): void {
     questions: ["你會支持這項計畫嗎？", "推動時最大的阻力是什麼？"]
   });
   confirmDraftPersona(projectDirectory);
+  if (options.acknowledgeDisclaimer !== false) {
+    setDraftDisclaimer(projectDirectory, true);
+  }
 }
 
 function currentPlanHash(projectDirectory: string): string {
@@ -460,6 +468,57 @@ describe("persistent run queue", () => {
     expect(first.jobs.map((job) => job.jobId)).toEqual(second.jobs.map((job) => job.jobId));
     expect(first.submissionId).toBe("sub-single-001");
     expect(second.duplicate).toBe(true);
+  });
+});
+
+describe("session prediction disclaimer", () => {
+  beforeEach(() => {
+    configureSessionStores();
+  });
+
+  it("keeps the session disclaimer after preview, input changes, and a completed Run", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-disclaimer-keep-"));
+    prepareDraft(projectDirectory, { acknowledgeDisclaimer: false });
+    expect(isDisclaimerAcknowledged(projectDirectory)).toBe(false);
+    expect(setDraftDisclaimer(projectDirectory, true)).toEqual({ disclaimerAcknowledged: true });
+    renderDraftPreflight(projectDirectory);
+    expect(isDisclaimerAcknowledged(projectDirectory)).toBe(true);
+    saveDraft({
+      projectDirectory,
+      questions: ["你會支持這項計畫嗎？", "推動時最大的阻力是什麼？", "還缺什麼資訊？"]
+    });
+    const secondView = renderDraftPreflight(projectDirectory) as { planHash: string };
+    expect(isDisclaimerAcknowledged(projectDirectory)).toBe(true);
+    await enqueueAndProcess(projectDirectory, secondView.planHash, true, "mocked");
+    expect(isDisclaimerAcknowledged(projectDirectory)).toBe(true);
+    expect(listQueuedJobs(projectDirectory)).toHaveLength(1);
+  });
+
+  it("does not treat checking the disclaimer as a plan approval", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-disclaimer-no-approve-"));
+    prepareDraft(projectDirectory, { acknowledgeDisclaimer: false });
+    setDraftDisclaimer(projectDirectory, true);
+    expect(listQueuedJobs(projectDirectory)).toEqual([]);
+    expect(() => enqueueRun(projectDirectory, "0".repeat(64), true, "mocked")).toThrow(/Preflight/);
+    expect(listQueuedJobs(projectDirectory)).toEqual([]);
+  });
+
+  it("resets the disclaimer when a different Project is opened", () => {
+    const first = mkdtempSync(join(tmpdir(), "opinion-desktop-disclaimer-a-"));
+    const second = mkdtempSync(join(tmpdir(), "opinion-desktop-disclaimer-b-"));
+    prepareDraft(first, { acknowledgeDisclaimer: false });
+    setDraftDisclaimer(first, true);
+    expect(isDisclaimerAcknowledged(first)).toBe(true);
+    createDraft(second, "另一個專案");
+    expect(isDisclaimerAcknowledged(first)).toBe(false);
+    expect(isDisclaimerAcknowledged(second)).toBe(false);
+  });
+
+  it("rejects enqueue when the session disclaimer is not checked", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-disclaimer-required-"));
+    prepareDraft(projectDirectory, { acknowledgeDisclaimer: false });
+    const hash = currentPlanHash(projectDirectory);
+    expect(() => enqueueRun(projectDirectory, hash, true, "mocked")).toThrow(/預測聲明/);
   });
 });
 

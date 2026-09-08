@@ -8,6 +8,7 @@ export const IPC_CHANNELS = [
   "project.confirmPersona",
   "project.selectPersonas",
   "preflight.render",
+  "preflight.setDisclaimer",
   "run.mocked",
   "run.liveGemini",
   "run.liveOpenai",

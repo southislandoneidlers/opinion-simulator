@@ -325,6 +325,10 @@ describe("workbook IPC", () => {
     await dispatchDesktopIpc(handlers, "project.confirmPersona", {
       projectDirectory: projectDir
     });
+    await dispatchDesktopIpc(handlers, "preflight.setDisclaimer", {
+      projectDirectory: projectDir,
+      acknowledged: true
+    });
 
     const reopened = (await dispatchDesktopIpc(handlers, "project.create", {
       projectDirectory: projectDir,
@@ -413,7 +417,7 @@ async function confirmImportedBatch(
   handlers: ReturnType<typeof createIpcHandlers>,
   projectDir: string,
   workbookPath: string
-): Promise<{ batchPlanHash: string }> {
+): Promise<{ batchPlanHash: string; disclaimerAcknowledged: boolean }> {
   await dispatchDesktopIpc(handlers, "project.create", {
     projectDirectory: projectDir,
     title: "Submission Dedup"
@@ -425,10 +429,17 @@ async function confirmImportedBatch(
   await dispatchDesktopIpc(handlers, "project.confirmPersona", {
     projectDirectory: projectDir
   });
+  await dispatchDesktopIpc(handlers, "preflight.setDisclaimer", {
+    projectDirectory: projectDir,
+    acknowledged: true
+  });
   const preflight = (await dispatchDesktopIpc(handlers, "preflight.render", {
     projectDirectory: projectDir
-  })) as { batchPlanHash: string };
-  return preflight;
+  })) as { batchPlanHash: string; disclaimerAcknowledged?: boolean };
+  return {
+    batchPlanHash: preflight.batchPlanHash,
+    disclaimerAcknowledged: Boolean(preflight.disclaimerAcknowledged)
+  };
 }
 
 describe("submission identity over IPC", () => {
@@ -609,5 +620,54 @@ describe("submission identity over IPC", () => {
       projectDirectory: projectDir
     })) as { jobs: unknown[] };
     expect(listed.jobs).toHaveLength(4);
+  });
+});
+
+describe("session disclaimer over IPC", () => {
+  const goldenPath = join(
+    __dirname,
+    "../../../../packages/core/fixtures/workbook/Opinion-Simulator-v0.3-Workbook-簡易模板.xlsx"
+  );
+  let handlers: ReturnType<typeof createIpcHandlers>;
+  let tempRoot: string;
+
+  beforeEach(() => {
+    configureLibraryDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-lib-")));
+    configureQueueDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-queue-")));
+    configureLastProjectDirectory(mkdtempSync(join(tmpdir(), "opinion-ipc-last-")));
+    tempRoot = mkdtempSync(join(tmpdir(), "opinion-ipc-disc-"));
+    handlers = createIpcHandlers({
+      chooseDirectory: async () => "/tmp",
+      chooseWorkbook: async () => goldenPath,
+      chooseMaterialFile: async () => null
+    });
+  });
+
+  afterEach(() => {
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it("keeps the disclaimer after rendering Preflight and resets it when switching Project", async () => {
+    const firstDir = join(tempRoot, "project-a");
+    const secondDir = join(tempRoot, "project-b");
+    mkdirSync(firstDir);
+    mkdirSync(secondDir);
+    const firstView = await confirmImportedBatch(handlers, firstDir, goldenPath);
+    expect(firstView.disclaimerAcknowledged).toBe(true);
+    const renderedAgain = (await dispatchDesktopIpc(handlers, "preflight.render", {
+      projectDirectory: firstDir
+    })) as { disclaimerAcknowledged: boolean };
+    expect(renderedAgain.disclaimerAcknowledged).toBe(true);
+
+    const second = (await dispatchDesktopIpc(handlers, "project.create", {
+      projectDirectory: secondDir,
+      title: "B"
+    })) as { disclaimerAcknowledged: boolean };
+    expect(second.disclaimerAcknowledged).toBe(false);
+
+    const firstAgain = (await dispatchDesktopIpc(handlers, "preflight.render", {
+      projectDirectory: firstDir
+    })) as { disclaimerAcknowledged: boolean };
+    expect(firstAgain.disclaimerAcknowledged).toBe(false);
   });
 });

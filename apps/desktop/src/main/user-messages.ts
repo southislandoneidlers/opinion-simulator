@@ -14,7 +14,7 @@ export function stalePreflightMessage(kind: "consumed" | "changed", runId?: stri
     const run = runId ? `（${runId}）` : "";
     return `【Preflight】上一筆 Run${run} 已完成，這份計畫預覽已用過。請到「Preflight」頁按「產生目前計畫預覽」，再執行下一筆。`;
   }
-  return "【Preflight】材料、Persona、問題或設定已變更，舊的計畫預覽已過期。請到「Preflight」頁重新產生預覽並承認預測聲明。";
+  return "【Preflight】材料、Persona、問題或設定已變更，舊的計畫預覽已過期。請到「Preflight」頁重新產生預覽。";
 }
 
 export function wrapProviderCallError(

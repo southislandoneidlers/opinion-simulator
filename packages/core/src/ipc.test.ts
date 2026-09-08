@@ -11,6 +11,7 @@ describe("IPC allow-list and secret-shaped keys", () => {
     expect(isIpcChannel("desktop.ping")).toBe(true);
     expect(isIpcChannel("queue.enqueue")).toBe(true);
     expect(isIpcChannel("queue.submissionStatus")).toBe(true);
+    expect(isIpcChannel("preflight.setDisclaimer")).toBe(true);
     expect(isIpcChannel("desktop.chooseWorkbook")).toBe(true);
     expect(isIpcChannel("workbook.validate")).toBe(true);
     expect(isIpcChannel("credential.load")).toBe(false);
