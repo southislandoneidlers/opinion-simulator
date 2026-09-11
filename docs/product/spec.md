@@ -15,13 +15,13 @@ trace stays in Run artifacts.
 ## Core rules
 
 Next-version decisions confirmed on 2026-09-07 are specified in
-[v0.4 使用回饋改進規格](v04-usability-improvements.md). Increments 1–4 are implemented: visible submission status and Main-side
+[v0.4 使用回饋改進規格](v04-usability-improvements.md). Increments 1–5 are implemented: visible submission status and Main-side
 `submissionId` deduplication prevent duplicate jobs; disclaimer acknowledgement
 is a Project-session flag separate from exact-plan preview and approval;
 same-submission Results share one comparison page keyed by a persistent
-execution batch; a local question library stores named questions for reuse.
-Remaining items are planned, not implemented: OpenRouter replaces direct
-OpenAI for new requests.
+execution batch; a local question library stores named questions for reuse;
+OpenRouter replaces direct OpenAI for new requests while Gemini direct and
+historical OpenAI reads are preserved.
 Historical OpenAI artifacts remain readable and immutable.
 
 - Persona fields need raw-input support or explicit per-inference acceptance;

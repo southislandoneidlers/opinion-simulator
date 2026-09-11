@@ -2,7 +2,8 @@ import type { ProviderId } from "@opinion-simulator/core";
 
 const PROVIDER_LABEL: Record<ProviderId, string> = {
   gemini: "Google Gemini",
-  openai: "OpenAI"
+  openai: "OpenAI",
+  openrouter: "OpenRouter"
 };
 
 export function providerLabel(provider: ProviderId): string {
@@ -91,6 +92,10 @@ export function toUserFacingMessage(raw: string): string {
     [
       /Gemini credential is not available/,
       wrapProviderCallError("gemini", new Error("not available")).message
+    ],
+    [
+      /OpenRouter credential is not available/,
+      wrapProviderCallError("openrouter", new Error("not available")).message
     ]
   ];
   for (const [pattern, message] of rules) {

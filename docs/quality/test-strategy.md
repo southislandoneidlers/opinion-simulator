@@ -39,14 +39,17 @@ separate, leaving legacy Runs unbatched, Python schema acceptance of the
 optional `executionBatches` field, and Renderer question-alignment copy. Question-library tests cover named
 single/set save, search, update/remove, append/replace into a draft, blank and
 cap rejection, corrupt-file refusal, and library edits leaving completed Run
-question snapshots unchanged.
+question snapshots unchanged. OpenRouter tests cover endpoint destination,
+OpenRouter headers, v2 canonical ordering, error handling, JSON mismatch,
+timeouts, credential isolation from OpenAI, IPC `run.liveOpenrouter`, legacy
+OpenAI job refusal in queue, and historical Project read compatibility.
 
 ## 中文閱讀摘要
 
 下一版新增驗收範圍見 [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)。
-送出防重、可見狀態、工作階段聲明、同頁批次比較與問題庫已有自動測試；
-OpenRouter 尚未實作。涉及畫面的需求仍須人工 GUI walkthrough；2026-09-07
-使用者「正常運作」回報不等於尚未實作項目已通過。
+送出防重、可見狀態、工作階段聲明、同頁批次比較、問題庫與 OpenRouter 遷移已有自動測試。
+涉及畫面的需求仍須人工 GUI walkthrough；2026-09-07
+使用者「正常運作」回報不等於完整跨平台或打包驗收已通過。
 
 這些測試不是在測「Excel 能不能打開」，而是在測系統會不會把不安全或格式錯誤的
 Workbook 誤當成可匯入資料。測試會確認合法的範本能讀出兩位 Persona，也會刻意

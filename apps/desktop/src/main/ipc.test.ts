@@ -89,7 +89,8 @@ describe("renderer secret-access over IPC", () => {
           fingerprint: fingerprintKey(FAKE_KEY),
           verifiedByUse: false
         },
-        openai: { available: false, source: null, fingerprint: null, verifiedByUse: false }
+        openai: { available: false, source: null, fingerprint: null, verifiedByUse: false },
+        openrouter: { available: false, source: null, fingerprint: null, verifiedByUse: false }
       },
       disclaimer: expect.any(String)
     });
@@ -128,6 +129,39 @@ describe("renderer secret-access over IPC", () => {
 
     expect(status.providers.gemini.verifiedByUse).toBe(true);
     expect(JSON.stringify(status)).not.toContain(FAKE_KEY);
+  });
+
+  it("returns a storage fingerprint after credential.set for openrouter and never the key", async () => {
+    const stored = new Map<string, string>();
+    setCredentialStoreForTests({
+      getPassword: async (_service, account) => stored.get(account) ?? null,
+      setPassword: async (_service, account, value) => {
+        stored.set(account, value);
+      },
+      deletePassword: async (_service, account) => stored.delete(account)
+    });
+    const result = await dispatchDesktopIpc(handlers, "credential.set", {
+      provider: "openrouter",
+      value: FAKE_KEY
+    });
+    expect(result).toMatchObject({
+      providers: {
+        openrouter: { available: true, source: "keychain", fingerprint: fingerprintKey(FAKE_KEY) }
+      }
+    });
+    expect(JSON.stringify(result)).not.toContain(FAKE_KEY);
+  });
+
+  it("rejects run.liveOpenai with migration guidance", async () => {
+    await expect(dispatchDesktopIpc(handlers, "run.liveOpenai", {})).rejects.toThrow(
+      /舊 OpenAI 直連通道已停用；新請求請使用 OpenRouter 或 Gemini/
+    );
+  });
+
+  it("dispatches run.liveOpenrouter instead of treating it as an unknown channel", async () => {
+    await expect(dispatchDesktopIpc(handlers, "run.liveOpenrouter", {})).rejects.toThrow(
+      /尚未確認 Persona Version/
+    );
   });
 
   it("does not expose a channel that loads the raw key", async () => {

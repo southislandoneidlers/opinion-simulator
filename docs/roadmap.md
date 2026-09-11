@@ -212,8 +212,8 @@ Exit criteria:
 
 ## v0.4 — Review, synthesis, and complete exports
 
-Status: five usability improvements confirmed on 2026-09-07. Increments 1–4
-implemented on 2026-09-08; increment 5 not started. See the canonical
+Status: five usability improvements confirmed on 2026-09-07. Increments 1–5
+implemented on 2026-09-08. See the canonical
 [v0.4 使用回饋改進規格](product/v04-usability-improvements.md).
 
 優先增量順序（先完成以下五項，再接續原有 Synthesis／匯出工作）：
@@ -222,7 +222,7 @@ implemented on 2026-09-08; increment 5 not started. See the canonical
 2. Preflight 聲明勾選保留，與每次精確計畫的預覽／核准分離。**已完成（2026-09-08）**
 3. 同次送出、同份材料的所有 Persona 意見在同頁比較，持久保存批次關聯。**已完成（2026-09-08）**
 4. 可保存與重用單題／多題問題集的本機問題庫。**已完成（2026-09-08）**
-5. 新請求以 OpenRouter 取代 OpenAI 直連，保留 Gemini 與舊 OpenAI 結果讀取。
+5. 新請求以 OpenRouter 取代 OpenAI 直連，保留 Gemini 與舊 OpenAI 結果讀取。**已完成（2026-09-08）**
 
 Each increment must pass the linked specification's acceptance cases before
 being marked complete. Existing v0.4 scope below remains scheduled afterward.

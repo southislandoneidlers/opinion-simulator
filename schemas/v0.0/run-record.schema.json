@@ -23,7 +23,7 @@
         "questionSet": {"type": "object"},
         "promptTemplate": {"type": "object"},
         "renderedPromptSections": {"type": "object"},
-        "provider": {"enum": ["agent-host", "gemini", "openai"]},
+        "provider": {"enum": ["agent-host", "gemini", "openai", "openrouter"]},
         "model": {"type": "string", "minLength": 1},
         "endpointClass": {"type": "string", "minLength": 1},
         "settings": {"type": "object"},

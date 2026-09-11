@@ -57,12 +57,14 @@ function makeStore(overrides?: {
 describe("keychain-backed provider credential storage", () => {
   const previousEnv: Record<string, string | undefined> = {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY
   };
 
   beforeEach(() => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
     resetProviderVerification();
   });
 
@@ -175,7 +177,39 @@ describe("keychain-backed provider credential storage", () => {
     await expect(storeProviderApiKey("gemini", "   ")).rejects.toThrow("API key");
     expect(isProviderId("claude")).toBe(false);
     expect(isProviderId("openai")).toBe(true);
+    expect(isProviderId("openrouter")).toBe(true);
     expect(calls).toHaveLength(0);
+  });
+
+  it("isolates OpenRouter credentials from OpenAI credentials", async () => {
+    const stored = new Map<string, string>([
+      [PROVIDER_ACCOUNTS.openai, "OLD-OPENAI-KEY"]
+    ]);
+    const { store } = makeStore({ stored });
+    setCredentialStoreForTests(store);
+
+    // OpenRouter has no stored key initially; does NOT read OpenAI key
+    expect(await resolveProviderCredential("openrouter")).toEqual({
+      available: false,
+      source: null,
+      fingerprint: null,
+      verifiedByUse: false
+    });
+
+    // Storing OpenRouter key does NOT alter or overwrite OpenAI key
+    await storeProviderApiKey("openrouter", "NEW-OPENROUTER-KEY");
+    expect(await loadProviderApiKey("openrouter")).toBe("NEW-OPENROUTER-KEY");
+    expect(await loadProviderApiKey("openai")).toBe("OLD-OPENAI-KEY");
+
+    // Clearing OpenRouter key does NOT delete OpenAI key
+    await clearProviderApiKey("openrouter");
+    expect(await loadProviderApiKey("openrouter")).toBeNull();
+    expect(await loadProviderApiKey("openai")).toBe("OLD-OPENAI-KEY");
+
+    // Env fallbacks are completely isolated
+    process.env.OPENROUTER_API_KEY = "ENV-OPENROUTER-KEY";
+    expect(await loadProviderApiKey("openrouter")).toBe("ENV-OPENROUTER-KEY");
+    delete process.env.OPENROUTER_API_KEY;
   });
 
   it("deletes the Keychain entry and reports absence cleanly", async () => {

@@ -14,7 +14,7 @@ document for the question at hand instead of copying its content elsewhere.
   scope, implementation and testing decisions. *(reconstructed summary)*
 - [Roadmap](roadmap.md) — ordered v0.0 through v2 delivery boundaries.
 - [v0.4 使用回饋改進規格](product/v04-usability-improvements.md) — 2026-09-07
-  五項已確認改進；增量 1–4 已於 2026-09-08 實作，OpenRouter 遷移尚未實作。
+  五項已確認改進；增量 1–5 已於 2026-09-08 實作完成。
 - [Workspace UX](ux/workspace.md) — freely navigable staged workflow and gates.
   *(partially reconstructed)*
 

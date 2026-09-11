@@ -19,12 +19,14 @@ export const KEYCHAIN_SERVICE = "opinion-simulator";
 
 export const PROVIDER_ACCOUNTS: Record<ProviderId, string> = {
   gemini: "gemini-api-key",
-  openai: "openai-api-key"
+  openai: "openai-api-key",
+  openrouter: "openrouter-api-key"
 };
 
 export const PROVIDER_ENV_KEYS: Record<ProviderId, string> = {
   gemini: "GEMINI_API_KEY",
-  openai: "OPENAI_API_KEY"
+  openai: "OPENAI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY"
 };
 
 export type CredentialSource = "keychain" | "env" | null;
@@ -148,7 +150,7 @@ function readEnvKey(provider: ProviderId): string | null {
 }
 
 export function isProviderId(value: unknown): value is ProviderId {
-  return value === "gemini" || value === "openai";
+  return value === "gemini" || value === "openai" || value === "openrouter";
 }
 
 export async function storeProviderApiKey(provider: ProviderId, value: string): Promise<void> {

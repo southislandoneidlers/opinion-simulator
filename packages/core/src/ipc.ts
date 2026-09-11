@@ -11,6 +11,7 @@ export const IPC_CHANNELS = [
   "preflight.setDisclaimer",
   "run.mocked",
   "run.liveGemini",
+  "run.liveOpenrouter",
   "run.liveOpenai",
   "queue.enqueue",
   "queue.enqueueBatch",

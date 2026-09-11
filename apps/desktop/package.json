@@ -16,6 +16,7 @@
     "@opinion-simulator/project-store": "0.1.0",
     "@opinion-simulator/providers-gemini": "0.1.0",
     "@opinion-simulator/providers-openai": "0.1.0",
+    "@opinion-simulator/providers-openrouter": "0.1.0",
     "keytar": "^7.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

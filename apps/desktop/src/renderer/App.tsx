@@ -11,7 +11,8 @@ import { LEGACY_UNBATCHED_NOTICE, answersByQuestion } from "./batch-comparison";
 
 type Stage = "overview" | "settings" | "materials" | "personas" | "questions" | "preflight" | "queue" | "results";
 
-type ProviderId = "gemini" | "openai";
+type ProviderId = "gemini" | "openai" | "openrouter";
+const ACTIVE_PROVIDERS: ProviderId[] = ["gemini", "openrouter"];
 
 type CredentialPresence = {
   available: boolean;
@@ -118,7 +119,8 @@ export function App() {
   const [providerMetadata, setProviderMetadata] = useState<ProviderMetadata | null>(null);
   const [credentialState, setCredentialState] = useState<Record<ProviderId, CredentialPresence>>({
     gemini: { available: false, source: null, fingerprint: null, verifiedByUse: false },
-    openai: { available: false, source: null, fingerprint: null, verifiedByUse: false }
+    openai: { available: false, source: null, fingerprint: null, verifiedByUse: false },
+    openrouter: { available: false, source: null, fingerprint: null, verifiedByUse: false }
   });
   const [saveReceipt, setSaveReceipt] = useState<{ provider: ProviderId; fingerprint: string } | null>(null);
   // API keys must never enter React state, because state may be retained by
@@ -166,16 +168,22 @@ export function App() {
     if (creds?.providers) {
       setCredentialState({
         gemini: {
-          available: creds.providers.gemini.available,
-          source: creds.providers.gemini.source,
-          fingerprint: creds.providers.gemini.fingerprint ?? null,
-          verifiedByUse: Boolean(creds.providers.gemini.verifiedByUse)
+          available: Boolean(creds.providers.gemini?.available),
+          source: creds.providers.gemini?.source ?? null,
+          fingerprint: creds.providers.gemini?.fingerprint ?? null,
+          verifiedByUse: Boolean(creds.providers.gemini?.verifiedByUse)
         },
         openai: {
-          available: creds.providers.openai.available,
-          source: creds.providers.openai.source,
-          fingerprint: creds.providers.openai.fingerprint ?? null,
-          verifiedByUse: Boolean(creds.providers.openai.verifiedByUse)
+          available: Boolean(creds.providers.openai?.available),
+          source: creds.providers.openai?.source ?? null,
+          fingerprint: creds.providers.openai?.fingerprint ?? null,
+          verifiedByUse: Boolean(creds.providers.openai?.verifiedByUse)
+        },
+        openrouter: {
+          available: Boolean(creds.providers.openrouter?.available),
+          source: creds.providers.openrouter?.source ?? null,
+          fingerprint: creds.providers.openrouter?.fingerprint ?? null,
+          verifiedByUse: Boolean(creds.providers.openrouter?.verifiedByUse)
         }
       });
     }
@@ -228,7 +236,7 @@ export function App() {
       setPersonaRaw(created.personaRaw);
       setPersonaLabel(created.personaLabel);
       setQuestions(created.questions.length > 0 ? created.questions : [""]);
-      if (created.provider === "gemini" || created.provider === "openai") {
+      if (created.provider === "gemini" || created.provider === "openrouter") {
         pickProvider(created.provider);
         if (created.model) {
           const listed = providerMetadata?.[created.provider].models ?? [];
@@ -240,6 +248,8 @@ export function App() {
             setModel(created.model);
           }
         }
+      } else {
+        pickProvider("openrouter");
       }
     }
     await refreshJobs(path);
@@ -833,7 +843,7 @@ export function App() {
         {stage === "overview" && (
           <section className="card">
             <h2>模型憑證狀態</h2>
-            {(["gemini", "openai"] as ProviderId[]).map((target) => {
+            {ACTIVE_PROVIDERS.map((target) => {
               const cred = credentialState[target];
               return (
                 <p key={target}>
@@ -863,7 +873,7 @@ export function App() {
             <p className="muted">
               統一管理模型服務商憑證。金鑰只會存入系統憑證儲存區（macOS Keychain / Windows Credential Manager），由主程序直接取用；前端介面與專案檔案皆不會留存或回顯金鑰。
             </p>
-            {(["gemini", "openai"] as ProviderId[]).map((target) => {
+            {ACTIVE_PROVIDERS.map((target) => {
               const cred = credentialState[target];
               const statusText = !cred.available
                 ? "尚未儲存"
@@ -913,6 +923,21 @@ export function App() {
                 </div>
               );
             })}
+            {credentialState.openai.available && (
+              <div
+                className="credential-row muted"
+                style={{ marginTop: "1rem", borderTop: "1px dashed #ccc", paddingTop: "0.5rem" }}
+              >
+                <p>
+                  <strong>OpenAI（已停用直連）</strong>：
+                  {credentialState.openai.source === "keychain" ? "金鑰保留於系統憑證儲存區" : "使用環境變數"}
+                  {credentialState.openai.fingerprint ? `（識別碼 ${credentialState.openai.fingerprint}）` : ""}
+                </p>
+                <p className="muted">
+                  新模擬已遷移至 OpenRouter。舊有 OpenAI 直連金鑰依規格保留未刪除；歷史 Run 紀錄仍可完整讀取。
+                </p>
+              </div>
+            )}
           </section>
         )}
         {stage === "materials" && (
@@ -1160,7 +1185,7 @@ export function App() {
             <label>
               供應商
               <select value={provider} onChange={(event) => pickProvider(event.target.value as ProviderId)}>
-                {(["gemini", "openai"] as ProviderId[]).map((id) => (
+                {ACTIVE_PROVIDERS.map((id) => (
                   <option key={id} value={id}>
                     {providerLabel(id)}
                   </option>

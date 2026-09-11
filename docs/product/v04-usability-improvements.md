@@ -1,7 +1,7 @@
 # v0.4 使用回饋改進規格
 
 狀態：2026-09-07 使用者確認五項改進方向。
-2026-09-08：增量 1–4 已實作（送出防重、聲明分離、同頁比較、問題庫）；增量 5 尚未實作。
+2026-09-08：五項增量均已實作完成（送出防重、聲明分離、同頁比較、問題庫、OpenRouter 遷移）。
 使用者回報目前實測正常運作，但沒有提供完整測試矩陣；不據此宣告跨平台、
 所有 provider 或所有 v0.3 exit criteria 均已驗收。
 
@@ -46,6 +46,14 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 - 先擴充適用的 schema／provider contract，再改寫入端；保留歷史讀取相容性。
 - 驗收包含目的地、JSON 解析／結構驗證、缺少憑證、不支援能力、HTTP 錯誤、
   timeout、脫敏與舊資料讀取。CI 使用 mocked transport，真實呼叫另行授權。
+
+### 實作狀態（2026-09-08）
+
+- 建立獨立套件 `@opinion-simulator/providers-openrouter`，對接 `https://openrouter.ai/api/v1/chat/completions`，支援 OpenRouter 模型 ID（預設 `openai/gpt-4o-mini`）、結構化驗證、逾時處理與金鑰脫敏。
+- 新請求 provider 僅提供 Google Gemini 與 OpenRouter，OpenAI 直連退出新請求介面。
+- 憑證採用系統憑證區獨立帳號 `openrouter-api-key` 與環境變數 `OPENROUTER_API_KEY`，不讀取、不轉送也不刪除既有 OpenAI key。
+- 舊 OpenAI Runs、報告與歷史 batch 保持原 provider 與 hash，繼續可讀；舊的未完成 OpenAI Job 不自動改送 OpenRouter，執行時引導重新預覽新計畫。
+- 自動測試覆蓋 OpenRouter adapter、HTTP 錯誤、JSON 解析、timeout、憑證隔離、IPC 與舊資料相容性。尚未做人工 GUI walkthrough 或真實 provider 呼叫。
 
 ## 2. 同次批次結果在同一頁比較
 
@@ -150,13 +158,12 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
   新 Preflight 才開始新的送出識別。回應遺失時先查 `queue.submissionStatus`。
 - 自動測試覆蓋並行／重送防重、缺識別拒絕、接受失敗重放、新預覽後新批次、
   以及 Renderer 狀態文案。尚未做人工 GUI walkthrough 或真實 provider 呼叫。
-  OpenRouter 路徑尚未存在；現有 mocked 與 Gemini／OpenAI live enqueue 共用
-  同一套 submission IPC。
+  mocked、Gemini live 與 OpenRouter live enqueue 共用同一套 submission IPC。
 
 ## 實作順序與驗證入口
 
 建議順序：送出防重與明顯狀態 → Preflight 聲明分離 → 批次同頁比較 → 問題庫
-→ OpenRouter 遷移。增量 1–4 已完成。下一個增量是 OpenRouter 遷移。
+→ OpenRouter 遷移。五項增量均已完成。
 
 沿用公開 IPC／session／queue、provider adapter 及 Project 讀寫 seam；
 互動需求須增加 Renderer 行為驗證與人工 walkthrough，不能僅靠 Main 測試宣告完成。
@@ -165,6 +172,6 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ## 範圍外
 
-2026-09-07 記錄規格時未實作功能。增量 1–4 已於 2026-09-08 實作。
+2026-09-07 記錄規格時未實作功能。五項增量已於 2026-09-08 實作完成。
 問題庫不包含雲端同步；同頁比較不自動生成跨 Persona Synthesis；
 OpenRouter 遷移不包含任意自訂 API gateway。既有 v0.4 匯出等項目不因本文件被取消。

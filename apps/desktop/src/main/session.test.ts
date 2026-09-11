@@ -24,15 +24,21 @@ import {
   selectDraftPersonas,
   applyQuestionSetFromLibrary
 } from "./session";
-import { confirmManualPersona } from "@opinion-simulator/core";
+import {
+  approvePreflight,
+  confirmManualPersona,
+  makeExecutionPlan,
+  planHash
+} from "@opinion-simulator/core";
 import { addPersona, configureLibraryDirectory, listPersonas } from "./persona-library";
 import { configureLastProjectDirectory } from "./last-project";
-import { configureQueueDirectory, loadQueue, saveQueue } from "./run-queue";
+import { appendJob, configureQueueDirectory, loadQueue, saveQueue } from "./run-queue";
 import {
   configureQuestionLibraryDirectory,
   saveQuestionLibraryEntry
 } from "./question-library";
-import { readSnapshot } from "@opinion-simulator/project-store";
+import { readSnapshot, writeCompletedRun } from "@opinion-simulator/project-store";
+import { mockGeminiResult } from "@opinion-simulator/providers-gemini";
 
 const GOLDEN_WORKBOOK = join(
   __dirname,
@@ -191,31 +197,228 @@ describe("provider and model selection", () => {
     configureSessionStores();
   });
 
-  function prepareOpenAiDraft(projectDirectory: string): void {
-    createDraft(projectDirectory, "OpenAI 模擬");
+  function prepareOpenrouterDraft(projectDirectory: string): void {
+    createDraft(projectDirectory, "OpenRouter 模擬");
     saveDraft({
       projectDirectory,
       sourceText: "第一階段先在三個行政區試辦，並公開每月支出。",
       personaRaw: "我是政策分析師，在意預算透明。",
       personaLabel: "政策分析師",
       questions: ["你會支持這項計畫嗎？"],
-      provider: "openai",
-      model: "gpt-4o-mini"
+      provider: "openrouter",
+      model: "openai/gpt-4o-mini"
     });
     confirmDraftPersona(projectDirectory);
   }
 
-  it("renders the selected provider and model as the Preflight destination", () => {
-    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-openai-"));
-    prepareOpenAiDraft(projectDirectory);
+  it("renders the selected OpenRouter provider and model as the Preflight destination", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-openrouter-"));
+    prepareOpenrouterDraft(projectDirectory);
     const view = renderDraftPreflight(projectDirectory) as unknown as {
       destination: { provider: string; model: string; endpointClass: string };
     };
     expect(view.destination).toEqual({
-      provider: "openai",
-      model: "gpt-4o-mini",
-      endpointClass: "openai-chat-completions"
+      provider: "openrouter",
+      model: "openai/gpt-4o-mini",
+      endpointClass: "openrouter-chat-completions"
     });
+  });
+
+  it("rejects retired openai direct provider for new requests", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-bad-openai-"));
+    createDraft(projectDirectory, "壞供應商測試");
+    expect(() =>
+      saveDraft({
+        projectDirectory,
+        sourceText: "材料",
+        personaRaw: "背景",
+        personaLabel: "角色",
+        questions: ["問題？"],
+        provider: "openai"
+      })
+    ).toThrow("OpenAI 直連已退出新請求介面；新模擬請選擇 OpenRouter 或 Google Gemini。");
+  });
+
+  it("refuses to execute legacy queued OpenAI jobs and requires re-plan", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-legacy-queue-"));
+    createDraft(projectDirectory, "舊 OpenAI 任務測試");
+    saveDraft({
+      projectDirectory,
+      sourceText: "材料",
+      personaRaw: "我是政策分析師，在意預算透明。",
+      personaLabel: "政策分析師",
+      questions: ["你會支持這項計畫嗎？"]
+    });
+    const draft = confirmDraftPersona(projectDirectory);
+    const persona = draft.persona!;
+    const legacyPlan = makeExecutionPlan({
+      sourceId: "src-001",
+      sourceText: "材料",
+      persona,
+      questionSet: { id: "q-1", title: "題", questions: ["你會支持這項計畫嗎？"], responseInstructions: "" },
+      settings: {
+        provider: "openai",
+        model: "gpt-5.6-luna",
+        endpointClass: "openai-chat-completions",
+        sampleCount: 1,
+        temperature: null,
+        maxOutputTokens: null,
+        seed: null
+      },
+      runId: "legacy-run-001"
+    });
+    const approval = approvePreflight({
+      plan: legacyPlan,
+      runId: "legacy-run-001",
+      presentedPlanHash: planHash(legacyPlan),
+      acknowledgedDisclaimer: true,
+      realPersonReconfirmed: false,
+      approvedAt: "2026-08-25T00:00:00Z"
+    });
+    appendJob({
+      jobId: "job-legacy-001",
+      projectDirectory,
+      projectId: "proj-legacy-001",
+      runId: "legacy-run-001",
+      reportId: "legacy-report-001",
+      planHash: planHash(legacyPlan),
+      approval,
+      mode: "live",
+      status: "queued",
+      createdAt: "2026-08-25T00:00:00Z",
+      startedAt: null,
+      completedAt: null,
+      error: null,
+      attempt: 1,
+      submissionId: "sub-legacy-001",
+      result: null,
+      request: {
+        title: "舊專案",
+        sourceText: "材料",
+        sourceId: "src-001",
+        personaRaw: "我是政策分析師，在意預算透明。",
+        personaLabel: "政策分析師",
+        realPersonApplies: false,
+        questions: ["你會支持這項計畫嗎？"],
+        persona,
+        provider: "openai",
+        model: "gpt-5.6-luna",
+        createdAt: "2026-08-25T00:00:00Z",
+        questionSet: { id: "q-1", title: "題", questions: ["你會支持這項計畫嗎？"], responseInstructions: "" },
+        sampleCount: 1
+      }
+    });
+
+    const snapshot = await processQueue(projectDirectory);
+    expect(snapshot).toBeNull();
+    const queued = listQueuedJobs(projectDirectory);
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.status).toBe("failed");
+    expect(queued[0]?.error).toContain(
+      "舊 OpenAI 直連任務已停用，且不得自動轉送 OpenRouter；請在介面選擇 OpenRouter 或 Gemini，重新預覽並送出新計畫。"
+    );
+  });
+
+  it("mocked OpenRouter run records an OpenRouter envelope, not a Gemini one", async () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-or-mock-"));
+    prepareOpenrouterDraft(projectDirectory);
+    setDraftDisclaimer(projectDirectory, true);
+    const snapshot = await runMocked(projectDirectory, currentPlanHash(projectDirectory), true);
+    expect(snapshot.provider).toBe("openrouter");
+    expect(snapshot.model).toBe("openai/gpt-4o-mini");
+    expect(snapshot.rawResponse).toMatchObject({ provider: "openrouter", mode: "mocked" });
+    expect(JSON.stringify(snapshot.rawResponse)).not.toMatch(/"provider"\s*:\s*"gemini"/);
+  });
+
+  it("reopens an OpenAI historical Project onto OpenRouter without copying the old model id", () => {
+    const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-openai-reopen-"));
+    const createdAt = "2026-08-25T00:00:00Z";
+    const persona = confirmManualPersona({
+      id: "persona-version-legacy-openai",
+      personaId: "persona-legacy-openai",
+      label: "政策分析師",
+      rawInput: "我是政策分析師，在意預算透明。",
+      fields: { roleAndContext: "我是政策分析師，在意預算透明。" },
+      confirmedAt: createdAt,
+      confirmedBy: "desktop-user",
+      realPersonApplies: false
+    });
+    const sourceText = "第一階段先在三個行政區試辦。";
+    const sourceId = "source-legacy-openai";
+    const questionSet = {
+      id: "questions-legacy-openai",
+      title: "舊問題",
+      questions: ["你會支持這項計畫嗎？"],
+      responseInstructions: ""
+    };
+    const runId = "run-legacy-openai-001";
+    const plan = makeExecutionPlan({
+      sourceId,
+      sourceText,
+      persona,
+      questionSet,
+      settings: {
+        provider: "openai",
+        model: "gpt-5.6-luna",
+        endpointClass: "openai-chat-completions",
+        sampleCount: 1,
+        temperature: null,
+        maxOutputTokens: null,
+        seed: null
+      },
+      runId
+    });
+    const mocked = mockGeminiResult({
+      sourceId,
+      sourceText,
+      questions: questionSet.questions
+    });
+    writeCompletedRun({
+      projectDirectory,
+      projectId: "project-legacy-openai",
+      title: "舊 OpenAI 專案",
+      description: "historical openai fixture",
+      locale: "zh-TW",
+      createdAt,
+      completedAt: "2026-08-25T00:01:00Z",
+      sourceId,
+      sourceText,
+      persona,
+      questionSet,
+      plan,
+      planHash: planHash(plan),
+      runId,
+      reportId: "report-legacy-openai-001",
+      samples: [
+        {
+          sampleId: plan.sampleIds[0],
+          result: mocked.result,
+          rawResponse: { text: mocked.result.directReaction, model: "gpt-5.6-luna" },
+          provider: "openai",
+          model: "gpt-5.6-luna",
+          completedAt: "2026-08-25T00:01:00Z"
+        }
+      ],
+      approval: {
+        schemaVersion: "0.0",
+        runId,
+        planHash: planHash(plan),
+        approvedAt: "2026-08-25T00:00:30Z",
+        acknowledgedDisclaimer: true,
+        realPersonReconfirmed: false
+      }
+    });
+
+    const historical = readSnapshot(projectDirectory);
+    expect(historical.provider).toBe("openai");
+    expect(historical.model).toBe("gpt-5.6-luna");
+
+    const reopened = openOrCreateDraft(projectDirectory, "ignored title");
+    expect(reopened.openedExisting).toBe(true);
+    expect(reopened.provider).toBe("openrouter");
+    expect(reopened.model).toBe("openai/gpt-4o-mini");
+    expect(readSnapshot(projectDirectory).provider).toBe("openai");
+    expect(readSnapshot(projectDirectory).model).toBe("gpt-5.6-luna");
   });
 
   it("rejects unknown providers and blank model names through the draft seam", () => {

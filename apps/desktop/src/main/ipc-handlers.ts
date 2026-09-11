@@ -110,13 +110,18 @@ export function createIpcHandlers(deps: IpcDependencies): Record<string, IpcHand
         Boolean(payload.acknowledgedDisclaimer),
         "gemini"
       ),
-    "run.liveOpenai": (payload) =>
+    "run.liveOpenrouter": (payload) =>
       runLive(
         String(payload.projectDirectory ?? ""),
         String(payload.planHash ?? ""),
         Boolean(payload.acknowledgedDisclaimer),
-        "openai"
+        "openrouter"
       ),
+    "run.liveOpenai": () => {
+      throw new Error(
+        "【OpenAI】舊 OpenAI 直連通道已停用；新請求請使用 OpenRouter 或 Gemini。"
+      );
+    },
     "queue.enqueue": (payload) => {
       if (payload.mode !== "live" && payload.mode !== "mocked") {
         throw new Error("不支援的執行模式");

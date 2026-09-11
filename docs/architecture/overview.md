@@ -17,9 +17,9 @@
   rewriting Run files. A hidden append journal
   makes interrupted appends recoverable without repeating a provider call. A
   non-empty directory that is not fully checksum- and schema-valid is refused.
-- `packages/providers-gemini` — mock adapter plus opt-in live Gemini client
-- `packages/providers-openai` — opt-in live OpenAI chat-completions client (v0.2 increment 2)
-  resolved only in the Electron main process.
+- `packages/providers-gemini` — mock adapter plus opt-in live Gemini client.
+- `packages/providers-openai` — legacy live OpenAI client, retained for backward-compatibility reads; new requests are migrated to OpenRouter.
+- `packages/providers-openrouter` — opt-in live OpenRouter chat-completions client (v0.4 increment 5), using OpenRouter models and credentials.
 - `apps/desktop` — Electron shell: sandboxed Renderer, contextIsolation, CSP,
   denied navigation, IPC allow-list with credential-shaped key rejection on
   both request and response. `credential.status` returns availability, storage
@@ -37,7 +37,7 @@
 
 ## Dependency direction
 
-desktop → core, project-store, providers-gemini, providers-openai.
+desktop → core, project-store, providers-gemini, providers-openai, providers-openrouter.
 Providers depend only on core contracts. Python CLI depends only on published
 schemas under `schemas/v0.0/`. Desktop Main reads a user-chosen `.xlsx` path
 and calls `validateWorkbook` in core; Renderer does not parse `.xlsx` and

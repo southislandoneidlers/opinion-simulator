@@ -31,7 +31,7 @@ import {
   type ProjectSnapshot
 } from "@opinion-simulator/project-store";
 import { liveGeminiGenerate, mockGeminiResult } from "@opinion-simulator/providers-gemini";
-import { liveOpenaiGenerate } from "@opinion-simulator/providers-openai";
+import { liveOpenrouterGenerate, mockOpenrouterResult } from "@opinion-simulator/providers-openrouter";
 import {
   isProviderId,
   loadProviderApiKey,
@@ -203,7 +203,13 @@ export function openOrCreateDraft(
         `拒絕寫入：${projectDirectory} 不是空資料夾，也不是有效的專案。現有內容不會被刪除。`
       );
     }
-    const provider: ProviderId = snapshot.provider === "openai" ? "openai" : "gemini";
+    const provider: ProviderId = snapshot.provider === "gemini" ? "gemini" : "openrouter";
+    // Retired OpenAI direct model ids (e.g. gpt-5.6-luna) are not OpenRouter
+    // model ids. New requests must use the OpenRouter catalogue, not a copied name.
+    const model =
+      snapshot.provider === "openai" || !snapshot.model
+        ? defaultModelFor(provider)
+        : snapshot.model;
     const draft: DraftState = {
       projectDirectory,
       projectId: existing.projectId,
@@ -216,7 +222,7 @@ export function openOrCreateDraft(
       questions: snapshot.questions,
       persona: snapshot.persona,
       provider,
-      model: snapshot.model || defaultModelFor(provider),
+      model,
       createdAt: existing.createdAt,
       frozenArtifacts: null
     };
@@ -237,6 +243,9 @@ export function saveDraft(input: Partial<DraftState> & { projectDirectory: strin
   }
   if (input.provider !== undefined && !isProviderId(input.provider)) {
     throw new Error("不支援的供應商");
+  }
+  if (input.provider === "openai") {
+    throw new Error("OpenAI 直連已退出新請求介面；新模擬請選擇 OpenRouter 或 Google Gemini。");
   }
   if (input.model !== undefined && (!String(input.model).trim() || /[\r\n]/.test(String(input.model)))) {
     throw new Error("Model 名稱不可為空白或含換行");
@@ -975,11 +984,15 @@ export async function runMocked(
     presentedPlanHash,
     acknowledgedDisclaimer
   );
-  const mocked = mockGeminiResult({
+  const mockInput = {
     sourceId: approved.sourceId,
     sourceText: draft.sourceText.replace(/\r\n/g, "\n"),
     questions: draft.questions.map((item) => item.trim()).filter(Boolean)
-  });
+  };
+  const mocked =
+    approved.plan.provider === "openrouter"
+      ? mockOpenrouterResult(mockInput)
+      : mockGeminiResult(mockInput);
   const completedAt = nowIso();
   return completeRun(
     draft,
@@ -1020,6 +1033,11 @@ export async function runLive(
       "【執行】Preflight 的供應商與按下的 Live 按鈕不相符。請到「Preflight」重新產生預覽後，再按對應供應商的 Live Run。"
     );
   }
+  if (provider === "openai") {
+    throw new Error(
+      "舊 OpenAI 直連任務已停用，且不得自動轉送 OpenRouter；請在介面選擇 OpenRouter 或 Gemini，重新預覽並送出新計畫。"
+    );
+  }
   const credential = await resolveProviderCredential(provider);
   if (!credential.available) {
     throw wrapProviderCallError(provider, new Error("not available"));
@@ -1032,8 +1050,8 @@ export async function runLive(
   try {
     for (const sampleId of approved.plan.sampleIds) {
       const live =
-        provider === "openai"
-          ? await liveOpenaiGenerate(approved.plan, { apiKey })
+        provider === "openrouter"
+          ? await liveOpenrouterGenerate(approved.plan, { apiKey })
           : await liveGeminiGenerate(approved.plan, { apiKey });
       markProviderVerified(provider, apiKey);
       samples.push({
@@ -1063,9 +1081,10 @@ export async function credentialStatus(): Promise<{
   >;
   disclaimer: string;
 }> {
-  const [gemini, openai] = await Promise.all([
+  const [gemini, openai, openrouter] = await Promise.all([
     resolveProviderCredential("gemini"),
-    resolveProviderCredential("openai")
+    resolveProviderCredential("openai"),
+    resolveProviderCredential("openrouter")
   ]);
   return {
     providers: {
@@ -1080,6 +1099,12 @@ export async function credentialStatus(): Promise<{
         source: openai.source,
         fingerprint: openai.fingerprint,
         verifiedByUse: openai.verifiedByUse
+      },
+      openrouter: {
+        available: openrouter.available,
+        source: openrouter.source,
+        fingerprint: openrouter.fingerprint,
+        verifiedByUse: openrouter.verifiedByUse
       }
     },
     disclaimer: DISCLAIMER
@@ -1276,11 +1301,18 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
       const sampleId = built.plan.sampleIds[completedSamples.length];
       let completedSample: StoredSampleResult;
       if (job.mode === "mocked") {
-        const mocked = mockGeminiResult({
-          sourceId: built.sourceId,
-          sourceText: draft.sourceText,
-          questions: draft.questions
-        });
+        const mocked =
+          built.plan.provider === "openrouter"
+            ? mockOpenrouterResult({
+                sourceId: built.sourceId,
+                sourceText: draft.sourceText,
+                questions: draft.questions
+              })
+            : mockGeminiResult({
+                sourceId: built.sourceId,
+                sourceText: draft.sourceText,
+                questions: draft.questions
+              });
         completedSample = {
           sampleId,
           result: mocked.result,
@@ -1290,6 +1322,11 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
           completedAt: nowIso()
         };
       } else {
+        if (built.plan.provider === "openai") {
+          throw new Error(
+            "舊 OpenAI 直連任務已停用，且不得自動轉送 OpenRouter；請在介面選擇 OpenRouter 或 Gemini，重新預覽並送出新計畫。"
+          );
+        }
         const credential = await resolveProviderCredential(built.plan.provider);
         if (!credential.available) {
           throw wrapProviderCallError(built.plan.provider, new Error("not available"));
@@ -1301,8 +1338,8 @@ async function executeJob(job: RunJob): Promise<ProjectSnapshot | null> {
         let live;
         try {
           live =
-            built.plan.provider === "openai"
-              ? await liveOpenaiGenerate(built.plan, { apiKey })
+            built.plan.provider === "openrouter"
+              ? await liveOpenrouterGenerate(built.plan, { apiKey })
               : await liveGeminiGenerate(built.plan, { apiKey });
           markProviderVerified(built.plan.provider, apiKey);
         } catch (error) {

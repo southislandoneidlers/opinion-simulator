@@ -15,6 +15,9 @@ describe("IPC allow-list and secret-shaped keys", () => {
     expect(isIpcChannel("question.library.list")).toBe(true);
     expect(isIpcChannel("desktop.chooseWorkbook")).toBe(true);
     expect(isIpcChannel("workbook.validate")).toBe(true);
+    expect(isIpcChannel("run.liveGemini")).toBe(true);
+    expect(isIpcChannel("run.liveOpenrouter")).toBe(true);
+    expect(isIpcChannel("run.liveOpenai")).toBe(true);
     expect(isIpcChannel("credential.load")).toBe(false);
     expect(isIpcChannel("run.live")).toBe(false);
   });

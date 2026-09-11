@@ -11,7 +11,10 @@ import type { PersonaVersion } from "./persona";
  */
 export const PROMPT_TEMPLATE_VERSION = 2;
 
-export type ProviderId = "gemini" | "openai";
+export type ProviderId = "gemini" | "openai" | "openrouter";
+
+/** Active providers offered for new simulations. OpenAI direct is retired for new requests. */
+export const ACTIVE_PROVIDER_IDS: readonly ProviderId[] = ["gemini", "openrouter"] as const;
 
 export type ProviderMetadata = {
   label: string;
@@ -33,6 +36,17 @@ export const PROVIDER_METADATA: Record<ProviderId, ProviderMetadata> = {
     models: ["gpt-5.6-luna"],
     defaultModel: "gpt-5.6-luna",
     endpointClass: "openai-chat-completions"
+  },
+  openrouter: {
+    label: "OpenRouter",
+    models: [
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3.5-haiku",
+      "google/gemini-2.0-flash-001",
+      "meta-llama/llama-3.3-70b-instruct"
+    ],
+    defaultModel: "openai/gpt-4o-mini",
+    endpointClass: "openrouter-chat-completions"
   }
 };
 

@@ -5,8 +5,9 @@ Freely navigable stages; gates enforce safety, not navigation order.
 Next version: [v0.4 使用回饋改進規格](../product/v04-usability-improvements.md)
 defines the confirmed 2026-09-07 changes. Visible submission status,
 Main-side duplicate-submit prevention, session disclaimer retention,
-same-page batch comparison, and a local question library are implemented.
-OpenRouter remains unimplemented.
+same-page batch comparison, a local question library, and OpenRouter migration
+(replacing OpenAI direct for new requests while preserving Gemini and historical OpenAI reads)
+are implemented.
 
 Stages:
 

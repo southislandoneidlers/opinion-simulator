@@ -14,14 +14,16 @@ Planned v0.4 changes are defined in
 intents are deduplicated in Main/queue by `submissionId`. Disclaimer
 acknowledgement is a process-memory Project-session flag and does not by
 itself authorize a provider call; exact-plan hash approval remains required.
-OpenRouter credential isolation remains unimplemented.
+OpenRouter credential isolation is implemented: independent account
+`openrouter-api-key` and environment fallback `OPENROUTER_API_KEY`; OpenAI keys
+are never forwarded or deleted.
 
 - Credentials only in macOS Keychain / Windows Credential Manager; the v0.1
   opt-in exception (a main-process environment variable) remains as fallback.
   The desktop main process uses Keytar's native credential-store bridge
-  (`opinion-simulator`, accounts `gemini-api-key` / `openai-api-key`) and
+  (`opinion-simulator`, accounts `gemini-api-key` / `openai-api-key` / `openrouter-api-key`) and
   never puts a key in a command-line argument. Resolution is credential store
-  first, then `GEMINI_API_KEY` / `OPENAI_API_KEY`. Renderer receives only
+  first, then `GEMINI_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY`. Renderer receives only
   per-provider availability flags, source labels ("keychain" | "env" | null),
   and a short one-way fingerprint, never the value. The value crosses exactly
   one seam: from the credentials module to a provider call in the main process;
