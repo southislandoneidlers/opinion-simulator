@@ -1,47 +1,91 @@
 # Opinion Simulator
 
-An opinion simulator: a desktop research tool for predicting how a defined
-Persona might respond to supplied material. Output is an **AI simulation
-conditioned on the Persona and Source — not a real quote**.
+[中文說明](README.zh-TW.md)
 
-## Status (2026-08-24)
+A desktop research tool for predicting how a **confirmed Persona** might
+respond to a supplied Source. The output is an **AI simulation — not a real
+quote**.
 
-- v0.0 Skill Prototype: the Python CLI under `.agents/skills/opinion-simulator/`
-  was reconstructed after the deletion from the surviving 837-line public test
-  suite and byte-exact golden fixtures; all 23 tests pass.
-- The five real walkthrough Projects in [`examples/walkthroughs/`](examples/walkthroughs/)
-  survived intact and revalidate as `valid`. Counted independent expert
-  walkthroughs: 3 of 3–5 (lower bound).
-- v0.1 Electron desktop tracer (`apps/desktop`) sources are restored verbatim
-  where the session record allowed, otherwise rebuilt to contract. The Persona
-  stage takes one free-form background input, Questions supports multiple
-  entries, UI copy is consistent Traditional Chinese, and IPC errors surface in
-  the status line.
-- Live Gemini is opt-in; the credential is resolved only from the main-process
-  environment (`GEMINI_API_KEY`), never stored in Projects or the Renderer.
+## Why this exists
 
-## Safety principles
+Many opinion-simulation setups are heavy: hosted platforms, extra accounts, or
+a long pipeline before you can see what leaves the machine.
 
-- **User-controlled personas:** AI may organize a draft, but unsupported facts
-  stay unprovided and inferred fields require explicit confirmation.
-- **Inspectable execution:** users review the exact outbound material and plan
-  before any model call; a stale plan hash refuses execution.
-- **Traceable results:** each immutable Run records versions, hashes, and raw
-  provider responses without credentials.
-- **Write protection:** Project writers require a nonexistent or empty target
-  directory and never delete existing content.
+This project keeps the **research path** small:
 
-## Development
+- local desktop app and local Project files
+- you bring your own model keys
+- Preflight shows the exact outbound Source, Persona, questions, and model
+  before any provider call
+- each Persona stays separately attributable; results are never treated as a
+  real interviewee's words
+
+The **install path** is not small. You still need a Node.js development
+environment, a local Electron build, and your own Gemini and/or OpenRouter API
+keys. There is no signed installer yet.
+
+## Current status (2026-09)
+
+Desktop tracer through the v0.4 usability increments:
+
+- import a Workbook (`.xlsx`) of 1–30 Personas, questions, and one Source
+- confirm Personas before a run; reuse a local question library
+- Preflight review; the prediction disclaimer is separate from plan approval
+- visible submit status and protection against duplicate submits
+- same-submission results compared on one page
+- new requests go to Gemini directly or to OpenRouter; historical OpenAI runs
+  stay readable
+- credentials live in macOS Keychain or Windows Credential Manager, with an
+  environment-variable fallback
+
+Not in this tree yet: signed/notarized builds, CSV/PDF export, desktop
+selected-result Synthesis, or a supported v1.0 release.
+
+A Python Skill CLI remains for validating Project directories. It is a
+prototype, not the primary UI.
+
+## Safety
+
+- Unsupported Persona facts stay unprovided; inferred fields need explicit
+  confirmation.
+- A stale Preflight plan hash refuses execution.
+- Each immutable Run records versions, hashes, and raw provider responses
+  without credentials.
+- Writers never delete existing Project content. A non-empty directory that is
+  not a valid Project is refused.
+
+## Run locally
+
+Developed with Node.js 22 on macOS. Clone, install, then build the desktop app:
 
 ```sh
+git clone https://github.com/southislandoneidlers/opinion-simulator.git
+cd opinion-simulator
+npm install
 npm test
 npm run build
 npm run start -w @opinion-simulator/desktop
-python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py validate-project <project-dir>
 ```
 
-Documentation index: `docs/README.md`; Project-example layout:
-`examples/README.md`; task continuity: `docs/handoffs/README.md`.
+Add keys in the in-app Settings stage, or export `GEMINI_API_KEY` /
+`OPENROUTER_API_KEY` in the shell that launches Electron. Do not put keys in
+Project files. `.env` is gitignored; `.env.example` is only a Gemini fallback
+template.
+
+Validate a Project directory with the Skill CLI:
+
+```sh
+python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py \
+  validate-project <project-dir>
+```
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [Product specification](docs/product/spec.md)
+- [Examples](examples/README.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
 
 ## License
 
