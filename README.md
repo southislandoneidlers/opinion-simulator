@@ -3,8 +3,7 @@
 [中文說明](README.zh-TW.md)
 
 A desktop research tool for predicting how a **confirmed Persona** might
-respond to a supplied Source. The output is an **AI simulation — not a real
-quote**.
+respond to a supplied Source.
 
 ## Why this exists
 
@@ -17,8 +16,7 @@ This project keeps the **research path** small:
 - you bring your own model keys
 - Preflight shows the exact outbound Source, Persona, questions, and model
   before any provider call
-- each Persona stays separately attributable; results are never treated as a
-  real interviewee's words
+- each Persona stays separately attributable
 
 The **install path** is not small. You still need a Node.js development
 environment, a local Electron build, and your own Gemini and/or OpenRouter API
@@ -90,3 +88,8 @@ python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py \
 ## License
 
 Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+## Disclaimer
+
+Output is an AI simulation conditioned on the Persona and Source. It is not a
+real quote and must not be presented as one.

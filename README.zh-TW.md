@@ -3,7 +3,7 @@
 [English](README.md)
 
 給研究者用的本機桌面工具：你提供一份材料與**已確認的 Persona**，它預測這個角色
-可能怎麼回應。輸出是 **AI 模擬，不是真實引言**。
+可能怎麼回應。
 
 ## 為什麼做這個
 
@@ -15,7 +15,7 @@
 - 本機桌面 App、本機 Project 檔
 - 你自己帶模型金鑰
 - 送出前的 Preflight 會顯示這次實際外傳的材料、Persona、問題與模型
-- 每個 Persona 的結果可分開追溯；模擬結果不當成受訪者原話
+- 每個 Persona 的結果可分開追溯
 
 **安裝路徑**並不小。你仍需要 Node.js 開發環境、本機建置 Electron，以及自己的
 Gemini 與／或 OpenRouter API 金鑰。目前沒有簽章安裝檔。
@@ -79,3 +79,7 @@ python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py \
 ## 授權
 
 Apache License 2.0。見 [`LICENSE`](LICENSE) 與 [`NOTICE`](NOTICE)。
+
+## 說明
+
+輸出是依 Persona 與材料產生的 AI 模擬，不是真實引言，也不得當成受訪者原話。
