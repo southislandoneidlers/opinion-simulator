@@ -1,8 +1,5 @@
 # Opinion Simulator
 
-> Reconstructed on 2026-08-24 after an accidental repository deletion destroyed
-> the original file. Status summary below reflects the surviving artifacts.
-
 An opinion simulator: a desktop research tool for predicting how a defined
 Persona might respond to supplied material. Output is an **AI simulation
 conditioned on the Persona and Source — not a real quote**.
