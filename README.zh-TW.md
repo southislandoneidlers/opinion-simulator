@@ -36,3 +36,7 @@ python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py validat
 
 文件索引見 `docs/README.md`；Project 範例配置見 `examples/README.md`；任務交接紀錄見
 `docs/handoffs/README.md`。
+
+## 授權
+
+Apache License 2.0。見 [`LICENSE`](LICENSE) 與 [`NOTICE`](NOTICE)。

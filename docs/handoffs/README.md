@@ -10,6 +10,7 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-09-11 | 首次公開 GitHub 倉庫：Apache-2.0、noreply 作者信箱 | Complete; tests, no live provider | [2026-09-11-github-public-release.md](2026-09-11-github-public-release.md) |
 | 2026-09-11 | OpenRouter 遷移除錯：IPC allow-list、舊 model 不照搬、mocked envelope | Complete; tests + full build | [2026-09-11-openrouter-migration-debug.md](2026-09-11-openrouter-migration-debug.md) |
 | 2026-09-08 | v0.4 增量 5：OpenRouter 遷移 | Complete; tests + full build | [2026-09-08-v04-openrouter-migration.md](2026-09-08-v04-openrouter-migration.md) |
 | 2026-09-08 | v0.4 增量 4：本機問題庫 | Complete; tests + full build | [2026-09-08-v04-question-library.md](2026-09-08-v04-question-library.md) |

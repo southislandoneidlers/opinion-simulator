@@ -45,3 +45,7 @@ python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py validat
 
 Documentation index: `docs/README.md`; Project-example layout:
 `examples/README.md`; task continuity: `docs/handoffs/README.md`.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
