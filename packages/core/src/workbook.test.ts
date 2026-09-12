@@ -544,7 +544,7 @@ describe("validateWorkbook", () => {
     }
   });
 
-  it("rejects out-of-range sample counts (0 and 101) with SAMPLE_COUNT_INVALID", () => {
+  it("rejects out-of-range sample counts (0 and 11) with SAMPLE_COUNT_INVALID", () => {
     const rawFiles0 = unpackZipForTest(goldenBytes);
     let sheet5_0 = rawFiles0["xl/worksheets/sheet5.xml"].toString("utf8");
     sheet5_0 = sheet5_0.replace(/<x:c r="E5"[^>]*><x:v>1<\/x:v><\/x:c>/, '<x:c r="E5" s="40" t="n"><x:v>0</x:v></x:c>');
@@ -556,15 +556,15 @@ describe("validateWorkbook", () => {
       expect(result0.errors.some((e) => e.code === "SAMPLE_COUNT_INVALID")).toBe(true);
     }
 
-    const rawFiles101 = unpackZipForTest(goldenBytes);
-    let sheet5_101 = rawFiles101["xl/worksheets/sheet5.xml"].toString("utf8");
-    sheet5_101 = sheet5_101.replace(/<x:c r="E5"[^>]*><x:v>1<\/x:v><\/x:c>/, '<x:c r="E5" s="40" t="n"><x:v>101</x:v></x:c>');
-    rawFiles101["xl/worksheets/sheet5.xml"] = Buffer.from(sheet5_101, "utf8");
-    const bytes101 = packZipForTest(rawFiles101);
-    const result101 = validateWorkbook({ bytes: bytes101 });
-    expect(result101.ok).toBe(false);
-    if (!result101.ok) {
-      expect(result101.errors.some((e) => e.code === "SAMPLE_COUNT_INVALID")).toBe(true);
+    const rawFiles11 = unpackZipForTest(goldenBytes);
+    let sheet5_11 = rawFiles11["xl/worksheets/sheet5.xml"].toString("utf8");
+    sheet5_11 = sheet5_11.replace(/<x:c r="E5"[^>]*><x:v>1<\/x:v><\/x:c>/, '<x:c r="E5" s="40" t="n"><x:v>11</x:v></x:c>');
+    rawFiles11["xl/worksheets/sheet5.xml"] = Buffer.from(sheet5_11, "utf8");
+    const bytes11 = packZipForTest(rawFiles11);
+    const result11 = validateWorkbook({ bytes: bytes11 });
+    expect(result11.ok).toBe(false);
+    if (!result11.ok) {
+      expect(result11.errors.some((e) => e.code === "SAMPLE_COUNT_INVALID")).toBe(true);
     }
   });
 

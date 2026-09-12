@@ -45,7 +45,7 @@ export type JobRequest = {
   model: string;
   createdAt: string;
   questionSet: QuestionSet;
-  sampleCount: 1 | 3;
+  sampleCount: number;
 };
 
 export type StoredSampleResult = {
@@ -181,7 +181,9 @@ export function loadQueue(): RunQueue {
       !job?.approval ||
       job.approval.planHash !== job.planHash ||
       !Object.prototype.hasOwnProperty.call(job, "result") ||
-      (job.request.sampleCount !== 1 && job.request.sampleCount !== 3)
+      (!Number.isInteger(job.request.sampleCount) ||
+        job.request.sampleCount < 1 ||
+        job.request.sampleCount > 10)
     ) {
       throw new Error(`Run queue 含不完整條目（${path}）`);
     }

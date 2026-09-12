@@ -253,22 +253,67 @@ class OpinionSimulatorCliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("no final user decision", result.stderr)
 
-    def test_only_one_or_three_samples_are_allowed(self) -> None:
+    def test_one_through_ten_samples_are_allowed(self) -> None:
+        fixture = FIXTURES / "golden-quick"
+        workflow = read_json(fixture / "workflow.json")
+        with tempfile.TemporaryDirectory(prefix="opinion-simulator-count-") as temporary:
+            workflow_path = Path(temporary) / "workflow.json"
+            for sample_count in (1, 2, 10):
+                workflow["execution"]["sampleCount"] = sample_count
+                write_json(workflow_path, workflow)
+                result = run_tool(
+                    "render-preflight",
+                    "--workflow",
+                    workflow_path,
+                    "--output",
+                    Path(temporary) / f"preflight-{sample_count}.json",
+                )
+                self.assert_success(result)
+
+            for sample_count in (0, 11):
+                workflow["execution"]["sampleCount"] = sample_count
+                write_json(workflow_path, workflow)
+                result = run_tool(
+                    "render-preflight",
+                    "--workflow",
+                    workflow_path,
+                    "--output",
+                    Path(temporary) / f"preflight-{sample_count}.json",
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("1 through 10", result.stderr)
+
+    def test_two_samples_build_an_exact_normalized_stability_comparison(self) -> None:
         fixture = FIXTURES / "golden-quick"
         workflow = read_json(fixture / "workflow.json")
         workflow["execution"]["sampleCount"] = 2
-        with tempfile.TemporaryDirectory(prefix="opinion-simulator-count-") as temporary:
-            workflow_path = Path(temporary) / "workflow.json"
+        samples = read_json(fixture / "samples.json")
+        second_sample = copy.deepcopy(samples["samples"][0])
+        second_sample["sampleId"] = "run-golden-quick-001-sample-002"
+        samples["samples"].append(second_sample)
+        with tempfile.TemporaryDirectory(prefix="opinion-simulator-two-samples-") as temporary:
+            temporary_path = Path(temporary)
+            workflow_path = temporary_path / "workflow.json"
+            approval_path = temporary_path / "approval.json"
+            samples_path = temporary_path / "samples.json"
+            output = temporary_path / "project"
             write_json(workflow_path, workflow)
-            result = run_tool(
-                "render-preflight",
+            write_json(samples_path, samples)
+            write_current_approval(workflow_path, approval_path, fixture / "approval.json")
+            built = run_tool(
+                "build-project",
                 "--workflow",
                 workflow_path,
+                "--approval",
+                approval_path,
+                "--samples",
+                samples_path,
                 "--output",
-                Path(temporary) / "preflight.json",
+                output,
             )
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("exactly 1 or 3", result.stderr)
+            self.assert_success(built)
+            run = read_json(output / "runs" / "run-golden-quick-001.json")
+            self.assertEqual(run["stabilityComparison"]["mode"], "exact-normalized-comparison")
 
     def test_changed_plan_rejects_stale_preflight_approval(self) -> None:
         fixture = FIXTURES / "golden-quick"

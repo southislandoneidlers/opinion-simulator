@@ -27,7 +27,7 @@ Scope:
 - pasted-text Source;
 - free-form Persona plus guarded AI organization and user confirmation;
 - structured prompt preview and manual Preflight;
-- one-Sample quick mode and three-Sample stability mode;
+- one-Sample quick mode and two-to-ten-Sample stability mode;
 - append-only Persona organization and simulation Runs;
 - structured JSON Result, raw response, comparison, and Markdown report;
 - canonical Project directory, schema validation, hashes, and handoff;
@@ -129,7 +129,7 @@ remediation.
 v0.3 已串成可測試的完整本機流程：Excel 由 Main 驗證並匯入記憶體草稿；匯入不會
 自動確認 Persona，使用者必須在 App 明確確認後，才能檢視綁定完整矩陣 hash 的
 Preflight。可從 library 勾選 1–30 位已確認 Persona，每位各自排入可重試 Job/Run；
-樣本數 3 會保存三份 Sample 並產生 exact-text Stability Comparison。Settings、
+樣本數 1–10；其中 2–10 會保存各自的 Sample 並產生 exact-text Stability Comparison。Settings、
 上次 Project/Workbook 記憶、檔案抽取與 grouped Results 也已接線。真實 provider
 與打包 GUI 仍是本次未驗證的邊界，不應由本機 mocked 測試推論為已通過。
 

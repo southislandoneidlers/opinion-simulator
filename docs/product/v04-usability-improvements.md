@@ -49,7 +49,7 @@ base URL 為 `https://openrouter.ai/api/v1`，使用 OpenRouter 自己的憑證�
 
 ### 實作狀態（2026-09-08）
 
-- 建立獨立套件 `@opinion-simulator/providers-openrouter`，對接 `https://openrouter.ai/api/v1/chat/completions`，支援 OpenRouter 模型 ID（預設 `openai/gpt-4o-mini`）、結構化驗證、逾時處理與金鑰脫敏。
+- 建立獨立套件 `@opinion-simulator/providers-openrouter`，對接 `https://openrouter.ai/api/v1/chat/completions`，支援 OpenRouter 模型 ID（預設 `openrouter/free`）、結構化驗證、逾時處理與金鑰脫敏；Free Models Router 會在請求時選擇可用免費模型，適合實驗與低量使用，不保證固定底層模型或可用性。
 - 新請求 provider 僅提供 Google Gemini 與 OpenRouter，OpenAI 直連退出新請求介面。
 - 憑證採用系統憑證區獨立帳號 `openrouter-api-key` 與環境變數 `OPENROUTER_API_KEY`，不讀取、不轉送也不刪除既有 OpenAI key。
 - 舊 OpenAI Runs、報告與歷史 batch 保持原 provider 與 hash，繼續可讀；舊的未完成 OpenAI Job 不自動改送 OpenRouter，執行時引導重新預覽新計畫。

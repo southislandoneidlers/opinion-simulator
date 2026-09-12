@@ -494,10 +494,10 @@ function runArtifactExists(projectDirectory: string, runId: string): boolean {
   return Boolean(inspected?.runIds.includes(runId));
 }
 
-function executableSampleCount(value: number | undefined): 1 | 3 {
+function executableSampleCount(value: number | undefined): number {
   const sampleCount = value ?? 1;
-  if (sampleCount !== 1 && sampleCount !== 3) {
-    throw new Error("【Preflight】目前可執行的樣本數只有 1 或 3；請修改 Workbook 後重新匯入。");
+  if (!Number.isInteger(sampleCount) || sampleCount < 1 || sampleCount > 10) {
+    throw new Error("【Preflight】樣本數必須是 1 到 10 的整數；請修改 Workbook 後重新匯入。");
   }
   return sampleCount;
 }

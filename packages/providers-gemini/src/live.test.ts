@@ -31,7 +31,7 @@ function makePlan(overrides?: Partial<ExecutionPlan>): ExecutionPlan {
       modelAndSampling: "MODEL-SAMPLING"
     },
     provider: "gemini",
-    model: "gemini-3.6-flash",
+    model: "gemini-3.8-flash",
     endpointClass: "google-generativelanguage",
     settings: { temperature: null, maxOutputTokens: null, seed: null },
     sampleCount: 1,

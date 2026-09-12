@@ -25,16 +25,11 @@ DISCLAIMER = (
     "It is not evidence of what any real person or group actually thinks."
 )
 
-# The default prompt-template definition was lost with the original script.
-# Its published v0.0 content hash is preserved verbatim so existing Projects
-# remain interpretable; see docs/handoffs for the reconstruction note.
-# Version 2 (2026-08-24): repeated/static sections are assembled first
-# (system rules, output schema, model/sampling) and per-Run content last
-# (Persona, questions, Source). Old version-1 Projects remain readable and
-# their stored plan hashes untouched.
+# New plans use one fixed order: repeated/static sections come first
+# (system rules, output schema, model/sampling), followed by the per-Run
+# Persona, questions, and Source sections. Stored Projects remain readable.
 TEMPLATE_ID = "default-persona-simulation"
 TEMPLATE_VERSION = 2
-TEMPLATE_CONTENT_HASH = "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638"
 
 # Canonical sent-prompt section order, shared with the desktop providers
 # (packages/core assemblePrompt). Keys refer to renderedPromptSections.
@@ -62,9 +57,10 @@ SYSTEM_AND_TASK_RULES = "\n".join(
         "Put simulated Persona Recommendations and System Suggestions in separate fields; never merge them into one unlabeled list.",
         "Separate source-supported observations from assumptions and uncertainty.",
         "Return the requested structured Result. Preserve the user's question language.",
-        DISCLAIMER,
     ]
 )
+
+TEMPLATE_CONTENT_HASH = hashlib.sha256(SYSTEM_AND_TASK_RULES.encode("utf-8")).hexdigest()
 
 WARNINGS = [
     "v0.0 agent-host prototype: no desktop credential vault, persistent queue, or signed application boundary.",
@@ -200,8 +196,8 @@ def make_plan(workflow: dict) -> tuple[dict, str]:
     persona = finalize_persona(workflow["persona"])
     execution = workflow["execution"]
     sample_count = execution["sampleCount"]
-    if sample_count not in (1, 3):
-        raise fail("quick mode uses exactly 1 or 3 Samples; stability mode uses 3")
+    if not isinstance(sample_count, int) or isinstance(sample_count, bool) or not 1 <= sample_count <= 10:
+        raise fail("sampleCount must be an integer from 1 through 10")
     sections = render_prompt_sections(workflow)
     characters = sum(len(text) for text in sections.values())
     estimate = {
@@ -683,7 +679,7 @@ def cmd_build_project(args) -> int:
         assert_result_contract(sample["parsedResult"])
 
     _SOURCE_HOLDER["text"] = source_text
-    comparison = compare_stability(samples_doc["samples"]) if len(samples_doc["samples"]) == 3 else None
+    comparison = compare_stability(samples_doc["samples"]) if len(samples_doc["samples"]) >= 2 else None
 
     output.mkdir(parents=False)
     persona = finalize_persona(workflow["persona"])

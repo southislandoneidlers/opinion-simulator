@@ -886,7 +886,7 @@ function buildRunDocument(input: CompletedRunInput) {
     throw new Error("Completed Samples do not match the approved Execution Plan.");
   }
   const stabilityComparison =
-    input.samples.length === 3
+    input.samples.length >= 2
       ? compareStability(
           input.samples.map((sample) => ({
             sampleId: sample.sampleId,

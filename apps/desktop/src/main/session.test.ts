@@ -174,11 +174,17 @@ describe("mocked desktop run", () => {
     await expect(runMocked(projectDirectory, "", true)).rejects.toThrow("尚未確認 Persona Version");
   });
 
-  it("refuses to silently coerce an unsupported Workbook sample count", () => {
+  it("accepts an in-range Workbook sample count without coercion", () => {
     const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-sample-count-"));
     prepareDraft(projectDirectory);
     saveDraft({ projectDirectory, sampleCount: 2 });
-    expect(() => renderDraftPreflight(projectDirectory)).toThrow(/樣本數.*1.*3/);
+    const preflight = renderDraftPreflight(projectDirectory) as { sampleCount: number; sampleIds: string[] };
+    expect(preflight.sampleCount).toBe(2);
+    expect(preflight.sampleIds).toHaveLength(2);
+    saveDraft({ projectDirectory, sampleCount: 10 });
+    const maxPreflight = renderDraftPreflight(projectDirectory) as { sampleCount: number; sampleIds: string[] };
+    expect(maxPreflight.sampleCount).toBe(10);
+    expect(maxPreflight.sampleIds).toHaveLength(10);
   });
 
   it("rejects an approval hash after the Source changes", async () => {
@@ -206,7 +212,7 @@ describe("provider and model selection", () => {
       personaLabel: "政策分析師",
       questions: ["你會支持這項計畫嗎？"],
       provider: "openrouter",
-      model: "openai/gpt-4o-mini"
+      model: "openrouter/free"
     });
     confirmDraftPersona(projectDirectory);
   }
@@ -219,7 +225,7 @@ describe("provider and model selection", () => {
     };
     expect(view.destination).toEqual({
       provider: "openrouter",
-      model: "openai/gpt-4o-mini",
+      model: "openrouter/free",
       endpointClass: "openrouter-chat-completions"
     });
   });
@@ -325,7 +331,7 @@ describe("provider and model selection", () => {
     setDraftDisclaimer(projectDirectory, true);
     const snapshot = await runMocked(projectDirectory, currentPlanHash(projectDirectory), true);
     expect(snapshot.provider).toBe("openrouter");
-    expect(snapshot.model).toBe("openai/gpt-4o-mini");
+    expect(snapshot.model).toBe("openrouter/free");
     expect(snapshot.rawResponse).toMatchObject({ provider: "openrouter", mode: "mocked" });
     expect(JSON.stringify(snapshot.rawResponse)).not.toMatch(/"provider"\s*:\s*"gemini"/);
   });
@@ -416,7 +422,7 @@ describe("provider and model selection", () => {
     const reopened = openOrCreateDraft(projectDirectory, "ignored title");
     expect(reopened.openedExisting).toBe(true);
     expect(reopened.provider).toBe("openrouter");
-    expect(reopened.model).toBe("openai/gpt-4o-mini");
+    expect(reopened.model).toBe("openrouter/free");
     expect(readSnapshot(projectDirectory).provider).toBe("openai");
     expect(readSnapshot(projectDirectory).model).toBe("gpt-5.6-luna");
   });
@@ -528,18 +534,18 @@ describe("persistent run queue", () => {
     expect(JSON.parse(python).runsChecked).toBe(1);
   });
 
-  it("executes and persists all three approved Samples with an exact-text Stability Comparison", async () => {
+  it("executes and persists all approved Samples with an exact-text Stability Comparison", async () => {
     const projectDirectory = mkdtempSync(join(tmpdir(), "opinion-desktop-stability-"));
     prepareDraft(projectDirectory);
-    saveDraft({ projectDirectory, sampleCount: 3 });
+    saveDraft({ projectDirectory, sampleCount: 2 });
 
     const preflight = renderDraftPreflight(projectDirectory) as {
       planHash: string;
       sampleCount: number;
       sampleIds: string[];
     };
-    expect(preflight.sampleCount).toBe(3);
-    expect(preflight.sampleIds).toHaveLength(3);
+    expect(preflight.sampleCount).toBe(2);
+    expect(preflight.sampleIds).toHaveLength(2);
 
     const completed = await enqueueAndProcess(projectDirectory, preflight.planHash, true, "mocked");
     expect(completed.jobs[0]?.status).toBe("completed");
@@ -553,8 +559,8 @@ describe("persistent run queue", () => {
       stabilityComparison: { mode: string };
     };
     expect(run.samples.map((sample) => sample.sampleId)).toEqual(run.executionPlan.sampleIds);
-    expect(run.samples).toHaveLength(3);
-    expect(run.stabilityComparison.mode).toBe("three-sample-exact-normalized-comparison");
+    expect(run.samples).toHaveLength(2);
+    expect(run.stabilityComparison.mode).toBe("exact-normalized-comparison");
 
     const python = execFileSync(
       "python3",

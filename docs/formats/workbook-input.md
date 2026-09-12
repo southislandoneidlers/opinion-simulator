@@ -45,7 +45,7 @@ links, table data range rows 5–104 (100 paste-ready rows), sample batch
 | Multi-Persona model | The imported document is always a 1–30 Persona batch model. Occupied Persona rows max 30. An enabled batch must name 1–30 enabled Personas. |
 | Mapping target | Output is `ValidatedWorkbook` (shared Source and Question Set, then Personas, then batches). Not today's single-Persona `DraftState`. Not a Project write. |
 | Credential scanning | Reject credential-**shaped column names** with the same regex as IPC keys. Do not scan cell text. |
-| `樣本數` | Workbook field remains 1–100. The importer stores the number as written and does **not** emit an executability warning. The review template demo value is 1. Building an `ExecutionPlan` still uses the current `1 \| 3` schema until a later increment; that check is not an importer warning. |
+| `樣本數` | Workbook field is an integer from 1–10. The importer and `ExecutionPlan` enforce the same range. The review template demo value is 1. |
 
 ## Accepted sheets and fields
 
@@ -110,7 +110,7 @@ Shared across rows of one `batchId`, listed first:
 
 - `sourceId`: required reference to one enabled Source.
 - `questionSetId`: required reference to one Question Set.
-- `樣本數`: required whole number from 1 through 100.
+- `樣本數`: required whole number from 1 through 10.
 
 Then identifiers and per-Persona cells:
 
@@ -185,7 +185,7 @@ personas: [{ label, rawInput, enabled, personaId }]
 batches: [{
   sourceId,             // shared
   questionSetId,        // shared
-  sampleCount,          // 1..100 as written; shared
+  sampleCount,          // 1..10; shared
   batchId,
   rows: [{ enabled, note, personaId }]
 }]
@@ -317,7 +317,7 @@ Lengths count Unicode scalar values (code points), not UTF-16 code units.
 | Questions in one Question Set | 50 | Multiple sets can share the 100 question rows |
 | Distinct `batchId` values | 20 | First App batch picker stays small |
 | `順序` | integer 1–1000 inclusive, unique per `questionSetId` | Matches the template's Excel validation upper bound |
-| `樣本數` | integer 1–100 inclusive | Accepted 2026-08-30 |
+| `樣本數` | integer 1–10 inclusive | Execution safety cap |
 
 ### Parser / zip
 
@@ -339,7 +339,7 @@ Order: shared Source and questions, then Personas, then batch orchestration.
 | `名稱` + `背景描述` | `DraftState.personaLabel` + `personaRaw` (one Persona) | `personas[]`, 1–30 occupied, unconfirmed |
 | `personaId` | App currently mints `slugId("persona", …)` at confirm time | Keep the Workbook id; App confirmation later mints `PersonaVersion.id` |
 | Simulation Batch | Not represented; session is single-Persona | `batches[]`: one Source, one Question Set, 1–30 Persona rows |
-| `樣本數` 1–100 | `ExecutionPlan.sampleCount` enum `1 \| 3` | Store the requested count as written; no importer warning |
+| `樣本數` 1–10 | `ExecutionPlan.sampleCount` integer 1–10 | Same validated range; no coercion |
 | Project directory | `project-store` append-only writer | Untouched |
 
 Today's `DraftState` cannot hold this document. Later session wiring replaces
@@ -402,7 +402,7 @@ codes are the test seam.
 | `ID_INVALID` | Fails `isId` |
 | `ID_DUPLICATE` | Duplicate `personaId` or `sourceId`, or duplicate `batchId`+`personaId` |
 | `ENABLE_INVALID` | Not `是` / `否` |
-| `SAMPLE_COUNT_INVALID` | Not an integer in 1–100 |
+| `SAMPLE_COUNT_INVALID` | Not an integer in 1–10 |
 | `QUESTION_ORDER_INVALID` | Not an integer in 1–1000 |
 | `QUESTION_ORDER_DUPLICATE` | Same `順序` twice in one Question Set |
 | `PERSONA_NOT_FOUND` | Batch row names a missing Persona |
@@ -447,7 +447,7 @@ Required cases:
 - formula in `personaId`
 - credential-shaped column name
 - zip bomb / oversized member
-- `樣本數` 0 and 101
+- `樣本數` 0 and 11
 - enabled batch row pointing at a disabled or missing Persona
 - two `batchId` rows with different `sourceId` or `樣本數`
 - duplicate `personaId` inside one batch
@@ -476,7 +476,7 @@ Required cases:
 ## Out of scope for this specification
 
 - Writing or rewriting a Project
-- Expanding `ExecutionPlan.sampleCount` beyond `1 \| 3`
+- Expanding `ExecutionPlan.sampleCount` beyond 1–10
 - Making `.xlsx` the sole canonical artifact
 - A new `@opinion-simulator/workbook` package
 
@@ -488,6 +488,6 @@ and the Desktop choose/validate/import IPC seams are implemented. A successful
 check is not an import; an import is not Persona confirmation; and confirmation
 is not Preflight approval. The App preserves Workbook `personaId` values,
 mints Persona Version ids only on explicit confirmation, and binds execution
-to the complete displayed batch plan hash. Workbook sample counts other than
-1 or 3 remain valid imported data but fail closed at executable Preflight until
-`ExecutionPlan.sampleCount` is expanded.
+to the complete displayed batch plan hash. Workbook sample counts are validated
+as 1–10 and use the same range at executable Preflight; they are never silently
+coerced.

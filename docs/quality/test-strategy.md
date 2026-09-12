@@ -24,7 +24,7 @@ missing paths, zero Project/Workbook mutation, preserved Workbook Persona ids,
 and explicit confirmation before Persona-library or Preflight use. Credential
 status includes a one-way fingerprint and fingerprint-bound `verifiedByUse`,
 never the key. Queue tests cover stale Preflight rejection, surfaced single-Job
-failures while batch processing continues, three-Sample resume/persistence,
+failures while batch processing continues, multi-Sample resume/persistence,
 and exact-text Stability Comparison. Material IPC rejects PDF streams whose
 decompressed size exceeds the bounded limit. v0.4 increment 1 tests cover
 `queue.enqueue` / `queue.enqueueBatch` `submissionId` dedup (parallel and

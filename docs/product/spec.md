@@ -24,12 +24,18 @@ OpenRouter replaces direct OpenAI for new requests while Gemini direct and
 historical OpenAI reads are preserved.
 Historical OpenAI artifacts remain readable and immutable.
 
+New-request catalog defaults are `gemini-3.8-flash` for Gemini and
+`openrouter/free` for OpenRouter. The latter selects an available free model at
+request time, so it is intended for experimentation and low-volume use rather
+than a promise of a fixed underlying model or availability level.
+
 - Persona fields need raw-input support or explicit per-inference acceptance;
   unsupported facts stay `not provided`.
 - Every external model call requires a current Preflight approval keyed by the
   exact plan hash and Run id; stale approvals are rejected. The Desktop passes
   that hash across its run IPC channel and freezes it into queued Jobs.
-- Quick mode uses exactly 1 Sample; stability mode uses 3 with an exact-text
+- A Run uses an integer `sampleCount` from 1 through 10. One Sample has no
+  Stability Comparison; two through ten Samples receive an exact-text
   Stability Comparison that makes no numeric confidence claims.
 - Synthesis is user-selected and fully attributed (`supportingSampleIds`);
   it is not a group quotation.

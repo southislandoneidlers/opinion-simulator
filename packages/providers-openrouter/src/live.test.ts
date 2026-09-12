@@ -35,7 +35,7 @@ function makePlan(overrides?: Partial<ExecutionPlan>): ExecutionPlan {
       modelAndSampling: "MODEL-SAMPLING"
     },
     provider: "openrouter",
-    model: "openai/gpt-4o-mini",
+    model: "openrouter/free",
     endpointClass: "openrouter-chat-completions",
     settings: { temperature: null, maxOutputTokens: null, seed: null },
     sampleCount: 1,
@@ -99,7 +99,7 @@ describe("liveOpenrouterGenerate", () => {
     expect(live.result.directReaction).toContain("預算透明");
     expect(live.rawResponse).toEqual({
       text: JSON.stringify(result),
-      model: "openai/gpt-4o-mini",
+      model: "openrouter/free",
       provider: "openrouter"
     });
 
@@ -111,7 +111,7 @@ describe("liveOpenrouterGenerate", () => {
     expect(headers["X-Title"]).toBe("Opinion Simulator");
 
     const body = JSON.parse(String(init.body));
-    expect(body.model).toBe("openai/gpt-4o-mini");
+    expect(body.model).toBe("openrouter/free");
     expect(body.response_format).toEqual({ type: "json_object" });
 
     // Canonical v2 ordering: static sections first, per-Run content last
@@ -140,9 +140,9 @@ describe("liveOpenrouterGenerate", () => {
   });
 
   it("surfaces provider HTTP errors without leaking the key", async () => {
-    stubFetch({ error: { message: "Model openai/gpt-4o-mini not found" } }, false, 404);
+    stubFetch({ error: { message: "Model openrouter/free not found" } }, false, 404);
     await expect(liveOpenrouterGenerate(makePlan(), { apiKey: FAKE_KEY })).rejects.toThrow(
-      "OpenRouter 請求失敗：Model openai/gpt-4o-mini not found"
+      "OpenRouter 請求失敗：Model openrouter/free not found"
     );
   });
 

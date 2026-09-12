@@ -9,7 +9,7 @@ python3 -B .agents/skills/opinion-simulator/scripts/opinion_simulator.py <comman
 ## Commands
 
 - `render-preflight --workflow W --output P` — render the outbound disclosure and
-  plan hash; rejects pending Persona inferences and sample counts other than 1 or 3.
+  plan hash; rejects pending Persona inferences and sample counts outside 1–10.
 - `build-project --workflow W --approval A --samples S --output D` — write an
   immutable Project (quick or stability). Refuses stale approvals, non-exact
   Source mappings, credential-shaped response keys, missing Direct Reaction,

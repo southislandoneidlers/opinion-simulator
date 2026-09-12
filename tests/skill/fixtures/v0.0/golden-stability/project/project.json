@@ -13,7 +13,7 @@
   "projectId": "project-golden-stability-001",
   "promptTemplateVersions": [
     {
-      "contentHash": "90505db80a5d5fe2dac128a985e7da6e9a2ad6365109f9b95e3c04cb04426638",
+      "contentHash": "cbac545883bc3547d1b3d0dcd6d018c8b0c7717aa353627aa01c4e1972c0b78f",
       "id": "default-persona-simulation",
       "version": 2
     }

@@ -12,6 +12,7 @@ import {
   PROVIDER_METADATA,
   type ExecutionPlan
 } from "./plan";
+import { DEFAULT_RULES, DISCLAIMER, REAL_PERSON_WARNING } from "./disclaimer";
 
 function makePersona() {
   return confirmManualPersona({
@@ -40,7 +41,7 @@ function makePlan(): ExecutionPlan {
     },
     settings: {
       provider: "gemini",
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       endpointClass: "google-generativelanguage",
       sampleCount: 1,
       temperature: null,
@@ -52,6 +53,11 @@ function makePlan(): ExecutionPlan {
 }
 
 describe("prompt template contract (v2 ordering)", () => {
+  it("keeps the disclaimer outside the sent default rules and retains the real-person warning", () => {
+    expect(DEFAULT_RULES).not.toContain(DISCLAIMER);
+    expect(REAL_PERSON_WARNING).toContain("real person");
+  });
+
   it("stamps the current template version into new plans", () => {
     expect(PROMPT_TEMPLATE_VERSION).toBe(2);
     expect(makePlan().promptTemplate.version).toBe(2);
@@ -81,7 +87,7 @@ describe("prompt template contract (v2 ordering)", () => {
       questionSet: first.questionSet,
       settings: {
         provider: "gemini",
-        model: "gemini-3.6-flash",
+        model: "gemini-3.8-flash",
         endpointClass: "google-generativelanguage",
         sampleCount: 1,
         temperature: null,
@@ -94,14 +100,12 @@ describe("prompt template contract (v2 ordering)", () => {
     expect(second.renderedPromptSections.sourceMaterial).toContain("source-002");
   });
 
-  it("preserves the legacy v1 assembly order for old stored plans", () => {
+  it("uses the fixed canonical order even for a stored v1 plan", () => {
     const plan = makePlan();
     const legacy = { ...plan, promptTemplate: { ...plan.promptTemplate, version: 1 } };
     const s = legacy.renderedPromptSections;
     expect(assemblePrompt(legacy)).toBe(
-      [s.systemAndTaskRules, s.persona, s.sourceMaterial, s.questions, s.outputSchema, s.modelAndSampling].join(
-        "\n\n"
-      )
+      [s.systemAndTaskRules, s.outputSchema, s.modelAndSampling, s.persona, s.questions, s.sourceMaterial].join("\n\n")
     );
   });
 
@@ -149,7 +153,7 @@ describe("batch Preflight estimates", () => {
         { personaId: "persona-002", label: "乙", plan: second, runId: "run-002" }
       ],
       provider: "gemini",
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       endpointClass: "google-generativelanguage",
       createdAt: "2026-09-03T00:00:00Z"
     });
@@ -165,9 +169,9 @@ describe("batch Preflight estimates", () => {
 describe("OpenRouter provider plan and metadata", () => {
   it("includes openrouter in PROVIDER_METADATA and ACTIVE_PROVIDER_IDS", () => {
     expect(PROVIDER_METADATA.openrouter.label).toBe("OpenRouter");
-    expect(PROVIDER_METADATA.openrouter.defaultModel).toBe("openai/gpt-4o-mini");
+    expect(PROVIDER_METADATA.openrouter.defaultModel).toBe("openrouter/free");
     expect(PROVIDER_METADATA.openrouter.endpointClass).toBe("openrouter-chat-completions");
-    expect(PROVIDER_METADATA.openrouter.models).toContain("openai/gpt-4o-mini");
+    expect(PROVIDER_METADATA.openrouter.models).toEqual(["openrouter/free"]);
   });
 
   it("creates a valid ExecutionPlan targeting OpenRouter", () => {
@@ -184,7 +188,7 @@ describe("OpenRouter provider plan and metadata", () => {
       },
       settings: {
         provider: "openrouter",
-        model: "openai/gpt-4o-mini",
+      model: "openrouter/free",
         endpointClass: "openrouter-chat-completions",
         sampleCount: 1,
         temperature: null,
@@ -194,12 +198,54 @@ describe("OpenRouter provider plan and metadata", () => {
       runId: "run-or-001"
     });
     expect(plan.provider).toBe("openrouter");
-    expect(plan.model).toBe("openai/gpt-4o-mini");
+    expect(plan.model).toBe("openrouter/free");
     expect(plan.endpointClass).toBe("openrouter-chat-completions");
     expect(planHash(plan)).toMatch(/^[a-f0-9]{64}$/);
     const assembled = assemblePrompt(plan);
     expect(assembled).toContain("測試內文。");
     expect(assembled).toContain("問題一？");
+  });
+
+  it("accepts every whole sample count from 1 through 10", () => {
+    for (const sampleCount of [1, 2, 10]) {
+      const plan = makeExecutionPlan({
+        sourceId: "source-001",
+        sourceText: "測試內文。",
+        persona: makePersona(),
+        questionSet: { id: "questions-001", title: "問題", questions: ["問題？"], responseInstructions: "" },
+        settings: {
+          provider: "gemini",
+          model: "gemini-3.8-flash",
+          endpointClass: "google-generativelanguage",
+          sampleCount,
+          temperature: null,
+          maxOutputTokens: null,
+          seed: null
+        },
+        runId: `run-${sampleCount}`
+      });
+      expect(plan.sampleIds).toHaveLength(sampleCount);
+    }
+    for (const sampleCount of [0, 11, 1.5]) {
+      expect(() =>
+        makeExecutionPlan({
+          sourceId: "source-001",
+          sourceText: "測試內文。",
+          persona: makePersona(),
+          questionSet: { id: "questions-001", title: "問題", questions: ["問題？"], responseInstructions: "" },
+          settings: {
+            provider: "gemini",
+            model: "gemini-3.8-flash",
+            endpointClass: "google-generativelanguage",
+            sampleCount,
+            temperature: null,
+            maxOutputTokens: null,
+            seed: null
+          },
+          runId: "run-invalid"
+        })
+      ).toThrow(/1 through 10/);
+    }
   });
 
   it("preserves backward compatibility with legacy openai plans", () => {

@@ -10,6 +10,7 @@ before the task ends. Do not rewrite an older handoff to describe later work.
 
 | Date | Task | Status | Handoff |
 |---|---|---|---|
+| 2026-09-12 | 模型預設、樣本數、prompt 組裝與規則精簡 | Complete; tests + full build, no live provider | [2026-09-12-model-samples-prompt-rules.md](2026-09-12-model-samples-prompt-rules.md) |
 | 2026-09-11 | GitHub About 現況：側欄簡介已去掉引言警告 | Complete; GitHub metadata, no live provider | [2026-09-11-github-about.md](2026-09-11-github-about.md) |
 | 2026-09-11 | 公開 README：引言警告改放到文末 | Complete; tests, no live provider | [2026-09-11-readme-disclaimer-placement.md](2026-09-11-readme-disclaimer-placement.md) |
 | 2026-09-11 | 重寫公開 README：v0.4 現況、研究路徑小／安裝路徑不小 | Complete; tests, no live provider | [2026-09-11-public-readme.md](2026-09-11-public-readme.md) |

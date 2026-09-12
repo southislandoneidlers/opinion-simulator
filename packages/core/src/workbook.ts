@@ -1183,11 +1183,11 @@ export function validateWorkbook(input: ValidateWorkbookInput): ValidateWorkbook
       });
     }
 
-    if (!Number.isInteger(sampleCountNum) || sampleCountNum < 1 || sampleCountNum > 100) {
+    if (!Number.isInteger(sampleCountNum) || sampleCountNum < 1 || sampleCountNum > 10) {
       errors.push({
         code: "SAMPLE_COUNT_INVALID",
         path: `BatchInputTable[${idx}].樣本數`,
-        message: `樣本數必須為 1 到 100 之整數`
+        message: `樣本數必須為 1 到 10 之整數`
       });
     }
 

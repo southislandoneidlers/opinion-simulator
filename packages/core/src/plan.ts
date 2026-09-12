@@ -27,8 +27,8 @@ export type ProviderMetadata = {
 export const PROVIDER_METADATA: Record<ProviderId, ProviderMetadata> = {
   gemini: {
     label: "Google Gemini",
-    models: ["gemini-3.6-flash"],
-    defaultModel: "gemini-3.6-flash",
+    models: ["gemini-3.8-flash"],
+    defaultModel: "gemini-3.8-flash",
     endpointClass: "google-generativelanguage"
   },
   openai: {
@@ -39,13 +39,8 @@ export const PROVIDER_METADATA: Record<ProviderId, ProviderMetadata> = {
   },
   openrouter: {
     label: "OpenRouter",
-    models: [
-      "openai/gpt-4o-mini",
-      "anthropic/claude-3.5-haiku",
-      "google/gemini-2.0-flash-001",
-      "meta-llama/llama-3.3-70b-instruct"
-    ],
-    defaultModel: "openai/gpt-4o-mini",
+    models: ["openrouter/free"],
+    defaultModel: "openrouter/free",
     endpointClass: "openrouter-chat-completions"
   }
 };
@@ -61,7 +56,7 @@ export type ExecutionSettings = {
   provider: ProviderId;
   model: string;
   endpointClass: string;
-  sampleCount: 1 | 3;
+  sampleCount: number;
   temperature: number | null;
   maxOutputTokens: number | null;
   seed: number | null;
@@ -91,7 +86,7 @@ export type ExecutionPlan = {
   model: string;
   endpointClass: string;
   settings: { temperature: number | null; maxOutputTokens: number | null; seed: number | null };
-  sampleCount: 1 | 3;
+  sampleCount: number;
   sampleIds: string[];
   truncation: { strategy: string; applied: boolean };
   estimate: {
@@ -189,8 +184,12 @@ export function makeExecutionPlan(input: {
   settings: ExecutionSettings;
   runId: string;
 }): ExecutionPlan {
-  if (input.settings.sampleCount !== 1 && input.settings.sampleCount !== 3) {
-    throw new Error("sampleCount must be 1 or 3");
+  if (
+    !Number.isInteger(input.settings.sampleCount) ||
+    input.settings.sampleCount < 1 ||
+    input.settings.sampleCount > 10
+  ) {
+    throw new Error("sampleCount must be an integer from 1 through 10");
   }
   const sections = renderPromptSections(
     input.persona,
@@ -287,25 +286,14 @@ export function assertCurrentPreflightApproval(
  */
 export function assemblePrompt(plan: ExecutionPlan): string {
   const sections = plan.renderedPromptSections;
-  const order =
-    plan.promptTemplate.version === 1
-      ? [
-          sections.systemAndTaskRules,
-          sections.persona,
-          sections.sourceMaterial,
-          sections.questions,
-          sections.outputSchema,
-          sections.modelAndSampling
-        ]
-      : [
-          sections.systemAndTaskRules,
-          sections.outputSchema,
-          sections.modelAndSampling,
-          sections.persona,
-          sections.questions,
-          sections.sourceMaterial
-        ];
-  return order.join("\n\n");
+  return [
+    sections.systemAndTaskRules,
+    sections.outputSchema,
+    sections.modelAndSampling,
+    sections.persona,
+    sections.questions,
+    sections.sourceMaterial
+  ].join("\n\n");
 }
 
 export function preflightView(plan: ExecutionPlan, createdAt: string, runId: string) {

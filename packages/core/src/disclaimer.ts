@@ -10,8 +10,7 @@ export const DEFAULT_RULES = [
   "Do not add missing Persona facts or present the output as a real quotation.",
   "Put simulated Persona Recommendations and System Suggestions in separate fields; never merge them into one unlabeled list.",
   "Separate source-supported observations from assumptions and uncertainty.",
-  "Return the requested structured Result. Preserve the user's question language.",
-  DISCLAIMER
+  "Return the requested structured Result. Preserve the user's question language."
 ].join("\n");
 
 export const METHOD_LIMITS = [
